@@ -1,0 +1,10 @@
+*.txt
+*.md
+*.py
+*.sh
+.git
+.github
+test
+test-e2e
+test-performance
+node_modules
