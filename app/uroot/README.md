@@ -1,0 +1,1 @@
+The files here are heavily based on https://github.com/u-root/u-root/tree/main/pkg/strace
