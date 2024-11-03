@@ -204,22 +204,12 @@ func PrintTraces(w io.Writer) EventCallback {
 
 // SysCallEnter is called each time a system call enter event happens.
 func SysCallEnter(t Task, s *SyscallEvent) string {
-	// i := defaultSyscallInfo(s.Sysno)
-	// if v, ok := syscalls[uintptr(s.Sysno)]; ok {
-	// 	*i = v
-	// }
-	// return i.printEnter(t, s.Args)
 	name, _ := sec.ScmpSyscall(s.Regs.Orig_rax).GetName()
 	return fmt.Sprintf("enter %s %s", t.Name(), name)
 }
 
 // SysCallExit is called each time a system call exit event happens.
 func SysCallExit(t Task, s *SyscallEvent) string {
-	// i := defaultSyscallInfo(s.Sysno)
-	// if v, ok := syscalls[uintptr(s.Sysno)]; ok {
-	// 	*i = v
-	// }
-	// return i.printExit(t, s.Duration, s.Args, s.Ret[0], s.Errno)
 	name, _ := sec.ScmpSyscall(s.Sysno).GetName()
 	return fmt.Sprintf("exit %s %s", t.Name(), name)
 }
