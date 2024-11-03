@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	config "github.com/discue/go-syscall-gatekeeper/app/buildtime-config"
 	"github.com/discue/go-syscall-gatekeeper/app/utils"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
@@ -217,28 +218,46 @@ func SysCallExit(t Task, s *SyscallEvent) string {
 func Exec(bin string, args []string) error {
 	cmd := exec.Command(bin, args...)
 
-	// // Create pipes for stdout and stderr
+	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("error creating stdout pipe: %w", err)
 	}
+	// if we should enable the gatekeeper via log search string
+	// create another goroutine that keeps monitoring stdout
+	if config.GatekeeperLivenessCheckLogEnabled {
+		go func() {
+			scanner := bufio.NewScanner(stdoutPipe)
+			for scanner.Scan() {
+				t := scanner.Text()
+				logger.Info(fmt.Sprintf(">> %s", t)) // Print to parent's stdout
+
+				if strings.Contains(t, config.GatekeeperLivenessCheckLogSearchString) {
+					logger.Info("Enabling gatekeeper now because log search string was detected.")
+					enforceGatekeeper()
+					break
+				}
+			}
+
+			// after we broke the first loop we create another without the if statement
+			for scanner.Scan() {
+				logger.Info(fmt.Sprintf(">> %s", scanner.Text())) // Print to parent's stdout
+			}
+		}()
+	} else {
+		go func() {
+			scanner := bufio.NewScanner(stdoutPipe)
+			for scanner.Scan() {
+				logger.Info(fmt.Sprintf(">> %s", scanner.Text())) // Print to parent's stdout
+			}
+		}()
+	}
+
+	// setup goroutines to read and print errout
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("error creating stderr pipe: %w", err)
 	}
-
-	// Goroutines to read and print output
-	go func() {
-		scanner := bufio.NewScanner(stdoutPipe)
-		for scanner.Scan() {
-			t := scanner.Text()
-			if strings.Contains(t, "running at") {
-				logger.Info("enforcing rules now") // Print to parent's stdout
-			}
-			logger.Info(t) // Print to parent's stdout
-		}
-	}()
-
 	go func() {
 		scanner := bufio.NewScanner(stderrPipe)
 		for scanner.Scan() {

@@ -25,9 +25,14 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini ${APP
 # Copy whole workspace
 COPY . ${APP_BUILD_FOLDER}/app
 
+# ENV GATEKEEPER_SYSCALLS_ALLOW_LIST=open
+
 # Build the application and remove the source code
 RUN cd ${APP_BUILD_FOLDER}/app \ 
     && go mod vendor \
+    && ls -l \
+    && go generate ./... \
+    && cat app/buildtime-config/syscalls.go \
     && go install \
     && mv ${GOPATH}/bin/${APP_MODULE_NAME} ${GOPATH}/bin/${APP_TARGET_NAME} \
     && rm -rf ${APP_BUILD_FOLDER}/app

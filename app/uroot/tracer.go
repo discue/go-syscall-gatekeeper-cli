@@ -5,6 +5,8 @@ import (
 	"syscall"
 	"time"
 
+	config "github.com/discue/go-syscall-gatekeeper/app/buildtime-config"
+	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
 
@@ -97,6 +99,13 @@ func (t *tracer) runLoop() error {
 			case syscall.SIGTRAP | 0x80:
 				if err := rec.syscallStop(p); err != nil {
 					return err
+				}
+
+				name, _ := sec.ScmpSyscall(rec.Syscall.Regs.Orig_rax).GetName()
+				if config.SyscallsKillTargetIfNotAllowed {
+					if config.SyscallsAllowList[name] == false {
+						injectSignal = syscall.SIGKILL
+					}
 				}
 
 			// Group-stop, but also a special stop: first stop after
