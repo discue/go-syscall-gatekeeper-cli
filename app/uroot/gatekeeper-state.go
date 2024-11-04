@@ -1,8 +1,10 @@
 package uroot
 
+import "fmt"
+
 var enforced = false
-var syscallsBeforeEnforce = make(map[string]int)
-var syscallsAfterEnforce = make(map[string]int)
+var syscallsBeforeEnforce = make(map[string]int64)
+var syscallsAfterEnforce = make(map[string]int64)
 
 func enforceGatekeeper() {
 	enforced = true
@@ -12,18 +14,19 @@ func GetIsGatekeeperEnforced() bool {
 	return enforced
 }
 
-func addSyscallToCollection(_rax int, name string) {
+func addSyscallToCollection(rax uint64, name string) {
+	key := fmt.Sprintf("%d->%s", rax, name)
 	if enforced {
-		syscallsAfterEnforce[name] = syscallsAfterEnforce[name] + 1
+		syscallsAfterEnforce[key] = syscallsAfterEnforce[key] + 1
 	} else {
-		syscallsBeforeEnforce[name] = syscallsBeforeEnforce[name] + 1
+		syscallsBeforeEnforce[key] = syscallsBeforeEnforce[key] + 1
 	}
 }
 
-func GetSyscallsCollectedBeforeEnforce() map[string]int {
+func GetSyscallsCollectedBeforeEnforce() map[string]int64 {
 	return syscallsBeforeEnforce
 }
 
-func GetSyscallsCollectedAfterEnforce() map[string]int {
+func GetSyscallsCollectedAfterEnforce() map[string]int64 {
 	return syscallsAfterEnforce
 }

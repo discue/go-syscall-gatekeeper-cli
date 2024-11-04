@@ -101,7 +101,10 @@ func (t *tracer) runLoop() error {
 					return err
 				}
 
-				name, _ := sec.ScmpSyscall(rec.Syscall.Regs.Orig_rax).GetName()
+				rax := rec.Syscall.Regs.Orig_rax
+				name, _ := sec.ScmpSyscall(rax).GetName()
+
+				addSyscallToCollection(rax, name)
 				if config.SyscallsKillTargetIfNotAllowed {
 					if config.SyscallsAllowList[name] == false {
 						injectSignal = syscall.SIGKILL
