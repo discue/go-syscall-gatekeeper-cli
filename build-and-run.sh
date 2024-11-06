@@ -10,4 +10,4 @@ stop
 trap stop EXIT ERR SIGINT SIGTERM
 
 docker build --progress plain -t gatekeeper .
-exec docker run --rm -p 8080:8080 gatekeeper
+exec docker run --rm -p 8080:8080 -p 8888:8888 gatekeeper
