@@ -8,7 +8,7 @@ const GatekeeperLivenessCheckHttpProbeIntervalSeconds = 1
 const GatekeeperLivenessCheckLogEnabled = true
 const GatekeeperLivenessCheckLogSearchString = "Server running at"
 
-const SyscallsDelayEnforceUntilTargetLive = true
+const SyscallsDelayEnforceUntilCheck = true
 const SyscallsKillTargetIfNotAllowed = true
 
 var SyscallsAllowList = map[string]bool{}
