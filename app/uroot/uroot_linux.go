@@ -12,6 +12,7 @@ package uroot
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -213,7 +214,7 @@ func SysCallExit(t Task, s *SyscallEvent) string {
 	return fmt.Sprintf("exit %s %s", t.Name(), name)
 }
 
-func Exec(bin string, args []string) error {
+func Exec(c context.Context, bin string, args []string) error {
 	cmd := exec.Command(bin, args...)
 
 	// setup goroutines to read and print stdout

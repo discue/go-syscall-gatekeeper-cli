@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -16,17 +17,18 @@ import (
 var logger = utils.NewLogger("main")
 
 func main() {
-	startTracee()
+	c := context.Background()
+	startTracee(c)
 	startServer()
-	stopServerAfterSignal()
+	stopServerAfterSignal(c)
 }
 
-func startTracee() {
+func startTracee(c context.Context) {
 	flag.Parse()
 	args := flag.Args()
 
 	go func() {
-		err := uroot.Exec(args[0], args[1:])
+		err := uroot.Exec(c, args[0], args[1:])
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -39,11 +41,12 @@ func startServer() {
 	}()
 }
 
-func stopServerAfterSignal() {
+func stopServerAfterSignal(c context.Context) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
+	c.Done()
 	server.Stop()
 
 	logger.Info("Graceful shutdown complete.")

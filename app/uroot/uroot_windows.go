@@ -5,12 +5,13 @@ package uroot
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os/exec"
 )
 
-func Exec(bin string, args []string) error {
-	cmd := exec.Command(bin, args...)
+func Exec(c context.Context, bin string, args []string) error {
+	cmd := exec.CommandContext(c, bin, args...)
 
 	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -39,7 +40,8 @@ func Exec(bin string, args []string) error {
 	}()
 
 	cmd.Start()
+	logger.Info(fmt.Sprintf("%s started. Enabling gatekeeper now", bin))
 	enforceGatekeeper()
-
+	logger.Info(fmt.Sprintf("Gatekeeper enabled %t", GetIsGatekeeperEnforced()))
 	return cmd.Wait()
 }
