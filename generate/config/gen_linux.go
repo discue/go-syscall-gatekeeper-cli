@@ -22,15 +22,15 @@ const GatekeeperLivenessCheckHttpProbeIntervalSeconds = {{ printf "%d" .gatekeep
 const GatekeeperLivenessCheckLogEnabled = {{ printf "%t" .gatekeeperLogEnabled }}
 const GatekeeperLivenessCheckLogSearchString = "{{ printf "%s" .gatekeeperLogSearchString }}"
 
-const SyscallsDelayEnforceUntilTargetLive = {{ printf "%t" .delayEnforcement }}
+const SyscallsDelayEnforceUntilCheck = {{ printf "%t" .delayEnforcement }}
 const SyscallsKillTargetIfNotAllowed = {{ printf "%t" .killTarget }}
 var SyscallsAllowList = {{ printf "%#v" .allowList }}
 `
 
 type SyscallConfig struct {
-	SyscallsAllowList                   []string `split_words:"true"`
-	SyscallsDelayEnforceUntilTargetLive bool     `split_words:"true" default:"true"`
-	SyscallsKillTargetIfNotAllowed      bool     `split_words:"true" default:"true"`
+	SyscallsAllowList              []string `split_words:"true"`
+	SyscallsDelayEnforceUntilCheck bool     `split_words:"true" default:"true"`
+	SyscallsKillTargetIfNotAllowed bool     `split_words:"true" default:"true"`
 }
 
 type GatekeeperConfig struct {
@@ -64,7 +64,7 @@ func main() {
 			"gatekeeperHttpProbeSeconds": c.GatekeeperLivenessCheckHttpProbeIntervalSeconds,
 			"gatekeeperLogEnabled":       c.GatekeeperLivenessCheckLogEnabled,
 			"gatekeeperLogSearchString":  c.GatekeeperLivenessCheckLogSearchString,
-			"delayEnforcement":           c.SyscallsDelayEnforceUntilTargetLive,
+			"delayEnforcement":           c.SyscallsDelayEnforceUntilCheck,
 			"killTarget":                 c.SyscallsKillTargetIfNotAllowed,
 			"allowList":                  syscalls,
 		},
