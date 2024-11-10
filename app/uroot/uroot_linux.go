@@ -22,12 +22,10 @@ import (
 	"syscall"
 
 	config "github.com/discue/go-syscall-gatekeeper/app/buildtime-config"
-	"github.com/discue/go-syscall-gatekeeper/app/utils"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
 
-var logger = utils.NewLogger("uroot")
 var traceActive uint32
 
 type iovec struct {
@@ -223,9 +221,13 @@ func Exec(bin string, args []string) error {
 	if err != nil {
 		return fmt.Errorf("error creating stdout pipe: %w", err)
 	}
-	// if we should enable the gatekeeper via log search string
-	// create another goroutine that keeps monitoring stdout
-	if config.GatekeeperLivenessCheckLogEnabled {
+
+	if config.SyscallsDelayEnforceUntilCheck == false {
+		enforceGatekeeper()
+
+		// if we should enable the gatekeeper via log search string
+		// create another goroutine that keeps monitoring stdout
+	} else if config.GatekeeperLivenessCheckLogEnabled {
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
