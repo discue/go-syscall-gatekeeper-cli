@@ -6,9 +6,23 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+type SyscallConfig struct {
+	SyscallsAllowList              []string `split_words:"true"`
+	SyscallsAllowMap               map[string]bool
+	SyscallsDelayEnforceUntilCheck bool `split_words:"true" default:"true"`
+	SyscallsKillTargetIfNotAllowed bool `split_words:"true" default:"true"`
+}
+
+type GatekeeperConfig struct {
+	LivenessCheckHttpEnabled              bool   `split_words:"true" default:"false"`
+	LivenessCheckHttpProbeIntervalSeconds int    `split_words:"true" default:"1"`
+	LivenessCheckLogEnabled               bool   `split_words:"true" default:"true"`
+	LivenessCheckLogSearchString          string `split_words:"true" default:"Server running at"`
+}
+
 type GatekeeperServerConfig struct {
-	GatekeeperServerEnabled bool `split_words:"true" default:"true"`
-	GatekeeperServerPort    int  `split_words:"true" default:"8081"`
+	ServerEnabled bool `split_words:"true" default:"true"`
+	ServerPort    int  `split_words:"true" default:"8081"`
 }
 
 type LivenessProxyConfig struct {
@@ -28,6 +42,8 @@ type HealthProxyConfig struct {
 }
 
 type Config struct {
+	GatekeeperConfig
+	SyscallConfig
 	HealthProxyConfig
 	LivenessProxyConfig
 	GatekeeperServerConfig
