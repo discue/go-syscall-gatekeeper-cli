@@ -13,6 +13,15 @@ import (
 type tracer struct {
 	processes map[int]*process
 	callback  []EventCallback
+	stop      bool
+}
+
+func (t *tracer) terminate() {
+	// for pid, _ := range t.processes {
+	// 	logger.Info(fmt.Sprintf("Terminating pid %d", pid))
+	// 	syscall.Kill(pid, syscall.SIGINT)
+	// }
+	t.stop = true
 }
 
 func (t *tracer) call(p *process, rec *TraceRecord) error {
@@ -35,7 +44,7 @@ func (t *tracer) addProcess(pid int, event EventType) {
 }
 
 func (t *tracer) runLoop() error {
-	for {
+	for t.stop == false {
 		// TODO: we cannot have any other children. I'm not sure this
 		// is actually solvable: if we used a session or process group,
 		// a tracee process's usage of them would mess up our accounting.
@@ -190,4 +199,6 @@ func (t *tracer) runLoop() error {
 			return err
 		}
 	}
+
+	return nil
 }
