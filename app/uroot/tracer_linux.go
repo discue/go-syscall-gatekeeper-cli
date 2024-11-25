@@ -5,7 +5,7 @@ import (
 	"syscall"
 	"time"
 
-	config "github.com/discue/go-syscall-gatekeeper/app/buildtime-config"
+	"github.com/discue/go-syscall-gatekeeper/app/runtime"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
@@ -105,8 +105,8 @@ func (t *tracer) runLoop() error {
 				name, _ := sec.ScmpSyscall(rax).GetName()
 
 				addSyscallToCollection(rax, name)
-				if config.SyscallsKillTargetIfNotAllowed {
-					if config.SyscallsAllowList[name] == false {
+				if runtime.Get().SyscallsKillTargetIfNotAllowed {
+					if runtime.Get().SyscallsAllowMap[name] == false {
 						injectSignal = syscall.SIGKILL
 					}
 				}
