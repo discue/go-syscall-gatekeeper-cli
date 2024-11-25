@@ -6,33 +6,37 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 
 	server "github.com/discue/go-syscall-gatekeeper/app/proxy"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot"
-	"github.com/stfsy/go-api-kit/utils"
+	"github.com/discue/go-syscall-gatekeeper/app/utils"
 )
 
 var logger = utils.NewLogger("main")
 
 func main() {
-	c := context.Background()
-	startTracee(c)
+	mainCtx, cancel := context.WithCancel(context.Background())
+
+	tracee := startTracee(mainCtx)
 	startServer()
-	stopServerAfterSignal(c)
+	stopServerAfterSignal(cancel, tracee)
 }
 
-func startTracee(c context.Context) {
+func startTracee(c context.Context) *exec.Cmd {
+	traceeCtx, _ := context.WithCancel(c)
 	flag.Parse()
 	args := flag.Args()
 
-	go func() {
-		err := uroot.Exec(c, args[0], args[1:])
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	}()
+	cmd, err := uroot.Exec(traceeCtx, args[0], args[1:])
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	return cmd
 }
 
 func startServer() {
@@ -41,13 +45,22 @@ func startServer() {
 	}()
 }
 
-func stopServerAfterSignal(c context.Context) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+func stopServerAfterSignal(cancel context.CancelFunc, tracee *exec.Cmd) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM)
+	<-ctx.Done()
 
-	c.Done()
+	logger.Info("Signal received. Stopping.")
+
+	cancel()
+	time.Sleep(1 * time.Second)
+
+	stop()
 	server.Stop()
 
-	logger.Info("Graceful shutdown complete.")
+	logger.Info("Signal received. Stopping tracee.")
+	logger.Info("Signal received. Waiting for tracee to stop.")
+	tracee.Wait()
+	logger.Info("Shutting down.")
+
+	os.Exit(0)
 }

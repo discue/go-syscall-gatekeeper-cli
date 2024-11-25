@@ -21,8 +21,10 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 
-	config "github.com/discue/go-syscall-gatekeeper/app/buildtime-config"
+	runtimeConfig "github.com/discue/go-syscall-gatekeeper/app/runtime"
+
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
@@ -68,7 +70,7 @@ type NewChildEvent struct {
 //
 // recordCallback is called every time a process event happens with the process
 // in a stopped state.
-func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
+func Trace(c *exec.Cmd, ctx context.Context, recordCallback ...EventCallback) error {
 	if !atomic.CompareAndSwapUint32(&traceActive, 0, 1) {
 		return fmt.Errorf("a process trace is already active in this process")
 	}
@@ -94,6 +96,12 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 		processes: make(map[int]*process),
 		callback:  recordCallback,
 	}
+
+	go func() {
+		<-ctx.Done()
+		logger.Info("Stopping tracer")
+		tracer.terminate()
+	}()
 
 	// Start will fork, set PTRACE_TRACEME, and then execve. Once that
 	// happens, we should be stopped at the execve "exit". This wait will
@@ -186,9 +194,9 @@ func PrintTraces(w io.Writer) EventCallback {
 	return func(t Task, record *TraceRecord) error {
 		switch record.Event {
 		case SyscallEnter:
-			fmt.Fprintln(w, SysCallEnter(t, record.Syscall))
+			// fmt.Fprintln(w, SysCallEnter(t, record.Syscall))
 		case SyscallExit:
-			fmt.Fprintln(w, SysCallExit(t, record.Syscall))
+			// fmt.Fprintln(w, SysCallExit(t, record.Syscall))
 		case SignalExit:
 			fmt.Fprintf(w, "PID %d exited from signal %s\n", record.PID, signalString(record.SignalExit.Signal))
 		case Exit:
@@ -214,44 +222,82 @@ func SysCallExit(t Task, s *SyscallEvent) string {
 	return fmt.Sprintf("exit %s %s", t.Name(), name)
 }
 
-func Exec(c context.Context, bin string, args []string) error {
-	cmd := exec.Command(bin, args...)
+func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.WaitDelay = 5 * time.Second
+	cmd.Cancel = func() error {
+		return syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
+	}
 
 	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %w", err)
+		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
-	if config.SyscallsDelayEnforceUntilCheck == false {
+	logger.Info(fmt.Sprintf("config: %v", runtimeConfig.Get().LivenessCheckLogSearchString))
+
+	if runtimeConfig.Get().SyscallsDelayEnforceUntilCheck == false {
 		enforceGatekeeper()
 
 		// if we should enable the gatekeeper via log search string
 		// create another goroutine that keeps monitoring stdout
-	} else if config.GatekeeperLivenessCheckLogEnabled {
+	} else if runtimeConfig.Get().LivenessCheckLogEnabled {
+		newCtx, _ := context.WithCancel(ctx)
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
-				t := scanner.Text()
-				logger.Info(fmt.Sprintf(">> %s", t)) // Print to parent's stdout
-
-				if strings.Contains(t, config.GatekeeperLivenessCheckLogSearchString) {
-					logger.Info("Enabling gatekeeper now because log search string was detected.")
-					enforceGatekeeper()
+				if scanner.Err() != nil {
 					break
+				}
+
+				select {
+				case <-newCtx.Done():
+					stdoutPipe.Close()
+					break
+				default:
+					t := scanner.Text()
+					logger.Error(fmt.Sprintf("## %s", t)) // Print to parent's stdout
+
+					if strings.Contains(t, runtimeConfig.Get().LivenessCheckLogSearchString) {
+						logger.Info("Enabling gatekeeper now because log search string was detected.")
+						enforceGatekeeper()
+						break
+					}
 				}
 			}
 
 			// after we broke the first loop we create another without the if statement
 			for scanner.Scan() {
-				logger.Info(fmt.Sprintf(">> %s", scanner.Text())) // Print to parent's stdout
+				if scanner.Err() != nil {
+					break
+				}
+
+				select {
+				case <-newCtx.Done():
+					stdoutPipe.Close()
+					break
+				default:
+					logger.Error(fmt.Sprintf("## %s", scanner.Text())) // Print to parent's stdout
+				}
 			}
 		}()
 	} else {
+		newCtx, _ := context.WithCancel(ctx)
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
-				logger.Info(fmt.Sprintf(">> %s", scanner.Text())) // Print to parent's stdout
+				if scanner.Err() != nil {
+					break
+				}
+
+				select {
+				case <-newCtx.Done():
+					stdoutPipe.Close()
+					break
+				default:
+					logger.Error(fmt.Sprintf("## %s", scanner.Text())) // Print to parent's stdout
+				}
 			}
 		}()
 	}
@@ -259,21 +305,37 @@ func Exec(c context.Context, bin string, args []string) error {
 	// setup goroutines to read and print errout
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %w", err)
+		return nil, fmt.Errorf("error creating stderr pipe: %w", err)
 	}
+	newCtx, _ := context.WithCancel(ctx)
 	go func() {
 		scanner := bufio.NewScanner(stderrPipe)
 		for scanner.Scan() {
-			logger.Error(scanner.Text()) // Print to parent's stderr
+			if scanner.Err() != nil {
+				break
+			}
+
+			select {
+			case <-newCtx.Done():
+				stderrPipe.Close()
+				break
+			default:
+				logger.Error(fmt.Sprintf("## %s", scanner.Text())) // Print to parent's stdout
+			}
 		}
 	}()
 
-	return Strace(cmd, os.Stdout)
+	go func() {
+		tracerCtx, _ := context.WithCancel(ctx)
+		Strace(cmd, tracerCtx, os.Stdout)
+	}()
+
+	return cmd, nil
 }
 
 // Strace traces and prints process events for `c` and its children to `out`.
-func Strace(c *exec.Cmd, out io.Writer) error {
-	return Trace(c, PrintTraces(out))
+func Strace(c *exec.Cmd, ctx context.Context, out io.Writer) error {
+	return Trace(c, ctx, PrintTraces(out))
 }
 
 // EventType describes a process event.

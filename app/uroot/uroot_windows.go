@@ -10,13 +10,13 @@ import (
 	"os/exec"
 )
 
-func Exec(c context.Context, bin string, args []string) error {
+func Exec(c context.Context, bin string, args []string) (*exec.Cmd, error) {
 	cmd := exec.CommandContext(c, bin, args...)
 
 	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %w", err)
+		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
 	go func() {
@@ -30,8 +30,9 @@ func Exec(c context.Context, bin string, args []string) error {
 	// setup goroutines to read and print errout
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %w", err)
+		return nil, fmt.Errorf("error creating stderr pipe: %w", err)
 	}
+
 	go func() {
 		scanner := bufio.NewScanner(stderrPipe)
 		for scanner.Scan() {
@@ -39,9 +40,14 @@ func Exec(c context.Context, bin string, args []string) error {
 		}
 	}()
 
-	cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		logger.Error(fmt.Sprintf("error starting %s: %s", bin, err.Error()))
+		return nil, err
+	}
+
 	logger.Info(fmt.Sprintf("%s started. Enabling gatekeeper now", bin))
 	enforceGatekeeper()
 	logger.Info(fmt.Sprintf("Gatekeeper enabled %t", GetIsGatekeeperEnforced()))
-	return cmd.Wait()
+	return cmd, nil
 }
