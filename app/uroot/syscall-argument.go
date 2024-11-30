@@ -22,6 +22,9 @@ import (
 	"unsafe"
 )
 
+// Addr is an address for use in strace I/O
+type Addr uintptr
+
 // SyscallArgument is an argument supplied to a syscall implementation. The
 // methods used to access the arguments are named after the ***C type name*** and
 // they convert to the closest Go type available. For example, Int() refers to a
