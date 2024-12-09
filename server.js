@@ -1,10 +1,6 @@
 const http = require('http');
 const os = require('os');
 
-// Get OS-specific information (optional)
-const user = os.userInfo({ encoding: 'utf8' });
-console.log({ user })
-
 const port = process.env.PORT || 8080;
 const hostname = '0.0.0.0'; // Use for local server on the machine
 
