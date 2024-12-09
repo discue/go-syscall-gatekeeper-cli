@@ -11,12 +11,14 @@
 package uroot
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -61,29 +63,26 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
 		return syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
 	}
 
-	if runtimeConfig.Get().SyscallPrintBeforeExit {
+	if runtimeConfig.Get().ExecutionMode == runtimeConfig.EXECUTION_MODE_TRACE {
 		newCtx, _ := context.WithCancel(ctx)
 
 		go func() {
-			for {
-				select {
 
-				case <-newCtx.Done():
-					f, _ := os.Create("syscalls-before-enforce.txt")
-					for k, _ := range syscallsBeforeEnforce {
-						f.WriteString(k)
-						f.WriteString("\n")
-					}
-					f, _ = os.Create("syscalls-after-enforce.txt")
-					for k, _ := range syscallsAfterEnforce {
-						f.WriteString(k)
-						f.WriteString("\n")
-					}
-					break
-				default:
-
+			select {
+			case <-newCtx.Done():
+				f, _ := os.Create("gk-syscalls-before-enforce.txt")
+				for k, _ := range syscallsBeforeEnforce {
+					f.WriteString(k)
+					f.WriteString("\n")
 				}
+				f, _ = os.Create("gk-syscalls-after-enforce.txt")
+				for k, _ := range syscallsAfterEnforce {
+					f.WriteString(k)
+					f.WriteString("\n")
+				}
+				break
 			}
+
 		}()
 	}
 
@@ -100,45 +99,38 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
 		// if we should enable the gatekeeper via log search string
 		// create another goroutine that keeps monitoring stdout
 	} else {
-		// newCtx, _ := context.WithCancel(ctx)
-		// go func() {
-		// 	scanner := bufio.NewScanner(stdoutPipe)
-		// 	for scanner.Scan() {
-		// 		if scanner.Err() != nil {
-		// 			break
-		// 		}
+		newCtx, _ := context.WithCancel(ctx)
+		go func() {
+			scanner := bufio.NewScanner(stdoutPipe)
+			for scanner.Scan() {
+				if scanner.Err() != nil {
+					break
+				}
 
-		// 		select {
-		// 		case <-newCtx.Done():
-		// 			stdoutPipe.Close()
-		// 			break
-		// 		default:
-		// 			t := scanner.Text()
-		// 			logger.Error(fmt.Sprintf("## %s", t)) // Print to parent's stdout
+				brkLoop := false
+				select {
+				case <-newCtx.Done():
+					stdoutPipe.Close()
+					break
+				default:
+					t := scanner.Text()
+					os.Stdout.WriteString(t)
+					os.Stdout.WriteString("\n")
 
-		// 			if strings.Contains(t, runtimeConfig.Get().LivenessCheckLogSearchString) {
-		// 				logger.Info("Enabling gatekeeper now because log search string was detected.")
-		// 				enforceGatekeeper()
-		// 				break
-		// 			}
-		// 		}
-		// 	}
+					if strings.Contains(t, runtimeConfig.Get().LogSearchString) {
+						logger.Info("Enabling gatekeeper now because log search string was detected.")
+						enforceGatekeeper()
+						brkLoop = true
+					}
+				}
 
-		// 	// after we broke the first loop we create another without the if statement
-		// 	for scanner.Scan() {
-		// 		if scanner.Err() != nil {
-		// 			break
-		// 		}
+				if brkLoop {
+					break
+				}
+			}
 
-		// 		select {
-		// 		case <-newCtx.Done():
-		// 			stdoutPipe.Close()
-		// 			break
-		// 		default:
-		// 			logger.Error(fmt.Sprintf("## %s", scanner.Text())) // Print to parent's stdout
-		// 		}
-		// 	}
-		// }()
+			stdout.PipeStdOut(ctx, stdoutPipe)
+		}()
 	}
 
 	// setup goroutines to read and print errout
@@ -196,7 +188,7 @@ func Trace(c *exec.Cmd, ctx context.Context, recordCallback ...EventCallback) er
 
 	go func() {
 		<-ctx.Done()
-		logger.Info("Stopping tracer")
+		// logger.Info("Stopping tracer")
 		tracer.terminate()
 	}()
 

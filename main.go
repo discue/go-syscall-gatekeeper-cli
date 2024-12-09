@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/discue/go-syscall-gatekeeper/app/runtime"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot"
 	"github.com/discue/go-syscall-gatekeeper/app/utils"
 )
@@ -25,8 +26,39 @@ func main() {
 
 func startTracee(c context.Context) context.Context {
 	traceeCtx, _ := context.WithCancel(c)
-	flag.Parse()
-	args := flag.Args()
+	conf := runtime.Get()
+	mode := os.Args[1]
+	runCmd := flag.NewFlagSet("mode", flag.ExitOnError)
+	runLogSearchString := runCmd.String("log-search-string", "", "a string")
+	verbose := runCmd.Bool("verbose", false, "a bool")
+	runCmd.Parse(os.Args[2:])
+
+	if *runLogSearchString != "" {
+		conf.LogSearchString = *runLogSearchString
+		conf.EnforceOnStartup = false
+		conf.SyscallsKillTargetIfNotAllowed = false
+		conf.EnforceOnStartup = false
+	}
+
+	if mode == "trace" {
+		conf.ExecutionMode = runtime.EXECUTION_MODE_TRACE
+		conf.PrintTraceeOutput = false
+	} else if mode == "run" {
+		conf.ExecutionMode = runtime.EXECUTION_MODE_RUN
+		conf.PrintTraceeOutput = true
+	} else {
+		runCmd.Usage()
+		os.Exit(1)
+	}
+
+	conf.VerboseLog = *verbose
+	args := runCmd.Args()
+
+	if conf.VerboseLog {
+		println(fmt.Sprintf("%v", args))
+		println(fmt.Sprintf("%s", mode))
+		println(fmt.Sprintf("%s", *runLogSearchString))
+	}
 
 	cmd, err := uroot.Exec(traceeCtx, args[0], args[1:])
 	if err != nil {
@@ -56,10 +88,10 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 
 	select {
 	case <-signal.Done():
-		logger.Info("Signal received. Stopping.")
+		// logger.Info("Signal received. Stopping.")
 		break
 	case <-tracee.Done():
-		logger.Info("Tracee stopped. Stopping.")
+		// logger.Info("Tracee stopped. Stopping.")
 		break
 	}
 
@@ -68,10 +100,10 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 
 	stop()
 
-	logger.Info("Signal received. Stopping tracee.")
-	logger.Info("Signal received. Waiting for tracee to stop.")
+	// logger.Info("Signal received. Stopping tracee.")
+	// logger.Info("Signal received. Waiting for tracee to stop.")
 	<-tracee.Done()
-	logger.Info("Shutting down.")
+	// logger.Info("Shutting down.")
 
 	os.Exit(0)
 }

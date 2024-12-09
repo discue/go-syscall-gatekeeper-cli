@@ -20,11 +20,13 @@ type SyscallConfig struct {
 	EnforceOnStartup               bool `split_words:"true" default:"true"`
 	SyscallsKillTargetIfNotAllowed bool `split_words:"true" default:"true"`
 	SyscallPrintBeforeExit         bool `split_words:"true" default:"true"`
+	PrintTraceeOutput              bool `split_words:"true" default:"true"`
 }
 
 type GatekeeperConfig struct {
 	ExecutionMode   EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
 	LogSearchString string         `split_words:"true" default:"true"`
+	VerboseLog      bool           `split_words:"true" default:"false"`
 }
 
 type Config struct {
@@ -45,12 +47,12 @@ func Load() {
 	c = &s
 }
 
-func Get() Config {
+func Get() *Config {
 	if c == nil {
 		Load()
 	}
 
-	return *c
+	return c
 }
 
 func reset() {
