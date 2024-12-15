@@ -17,16 +17,14 @@ const (
 type SyscallConfig struct {
 	SyscallsAllowList              []string `split_words:"true"`
 	SyscallsAllowMap               map[string]bool
-	EnforceOnStartup               bool `split_words:"true" default:"true"`
 	SyscallsKillTargetIfNotAllowed bool `split_words:"true" default:"true"`
-	SyscallPrintBeforeExit         bool `split_words:"true" default:"true"`
-	PrintTraceeOutput              bool `split_words:"true" default:"true"`
 }
 
 type GatekeeperConfig struct {
-	ExecutionMode   EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
-	LogSearchString string         `split_words:"true" default:"true"`
-	VerboseLog      bool           `split_words:"true" default:"false"`
+	EnforceOnStartup bool           `split_words:"true" default:"true"`
+	ExecutionMode    EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
+	LogSearchString  string         `split_words:"true" default:"true"`
+	VerboseLog       bool           `split_words:"true" default:"false"`
 }
 
 type Config struct {

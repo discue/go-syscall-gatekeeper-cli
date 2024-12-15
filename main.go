@@ -42,10 +42,8 @@ func startTracee(c context.Context) context.Context {
 
 	if mode == "trace" {
 		conf.ExecutionMode = runtime.EXECUTION_MODE_TRACE
-		conf.PrintTraceeOutput = false
 	} else if mode == "run" {
 		conf.ExecutionMode = runtime.EXECUTION_MODE_RUN
-		conf.PrintTraceeOutput = true
 	} else {
 		runCmd.Usage()
 		os.Exit(1)
