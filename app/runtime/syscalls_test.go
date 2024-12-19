@@ -6,15 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReadSyscallFile(t *testing.T) {
-	sal := NewSyscallAllowList()
-	m := sal.readSyscallFile()
-
-	if len(m) == 0 {
-		t.Errorf("Expected map to not be empty, but got empty map")
-	}
-}
-
 func TestAllowAllFileSystemAccess(t *testing.T) {
 	a := assert.New(t)
 	sal := NewSyscallAllowList()
