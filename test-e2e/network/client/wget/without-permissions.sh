@@ -12,7 +12,7 @@ go run $main_path run \
 --allow-memory-management \
 --allow-process-synchronization \
 --allow-misc \
-wget google.com
+wget -P .tmp google.com
 
 if [[ $? -ne 0 ]]; then
     exit 0
