@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -26,18 +27,108 @@ func main() {
 
 func startTracee(c context.Context) context.Context {
 	traceeCtx, _ := context.WithCancel(c)
+	args := configureAndParseArgs()
+
+	_, exitContext, err := uroot.Exec(traceeCtx, args[0], args[1:])
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	return exitContext
+}
+
+func configureAndParseArgs() []string {
 	conf := runtime.Get()
 	mode := os.Args[1]
+
 	runCmd := flag.NewFlagSet("mode", flag.ExitOnError)
 	runLogSearchString := runCmd.String("log-search-string", "", "a string")
 	verbose := runCmd.Bool("verbose", false, "a bool")
+
+	// permissions
+	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "a bool")
+	allowProcessManagement := runCmd.Bool("allow-process-management", false, "a bool")
+	allowNetworking := runCmd.Bool("allow-networking", false, "a bool")
+	allowMemoryManagement := runCmd.Bool("allow-memory-management", false, "a bool")
+	allowSignals := runCmd.Bool("allow-signals", false, "a bool")
+	allowTimersAndClocksManagement := runCmd.Bool("allow-timers-and-clocks-management", false, "a bool")
+	allowSecurityAndPermissions := runCmd.Bool("allow-security-and-permissions", false, "a bool")
+	allowSystemInformation := runCmd.Bool("allow-system-information", false, "a bool")
+	allowProcessCommunication := runCmd.Bool("allow-process-communication", false, "a bool")
+	allowProcessSynchronization := runCmd.Bool("allow-process-synchronization", false, "a bool")
+	allowMisc := runCmd.Bool("allow-misc", false, "a bool")
+	noImplicitAllow := runCmd.Bool("no-implicit-allow", false, "a bool")
+
+	// parse flags now
 	runCmd.Parse(os.Args[2:])
+
+	allowList := runtime.NewSyscallAllowList()
+
+	if *allowFileSystemAccess {
+		allowList.AllowAllFileSystemAccess()
+	}
+
+	if *allowProcessManagement {
+		allowList.AllowProcessManagement()
+	}
+
+	if *allowNetworking {
+		allowList.AllowNetworking()
+	}
+
+	if *allowMemoryManagement {
+		allowList.AllowMemoryManagement()
+	}
+
+	if *allowSignals {
+		allowList.AllowSignals()
+	}
+
+	if *allowTimersAndClocksManagement {
+		allowList.AllowTimersAndClocksManagement()
+	}
+
+	if *allowSecurityAndPermissions {
+		allowList.AllowSecurityAndPermissions()
+	}
+
+	if *allowSystemInformation {
+		allowList.AllowSystemInformation()
+	}
+
+	if *allowProcessCommunication {
+		allowList.AllowProcessCommunication()
+	}
+
+	if *allowProcessSynchronization {
+		allowList.AllowProcessSynchronization()
+	}
+
+	if *allowMisc {
+		allowList.AllowMisc()
+	}
+
+	if !*noImplicitAllow {
+		allowList.AllowProcessManagement()
+		allowList.AllowMemoryManagement()
+		allowList.AllowProcessSynchronization()
+		allowList.AllowSignals()
+		allowList.AllowMisc()
+		allowList.AllowSecurityAndPermissions()
+	}
+
+	conf.VerboseLog = *verbose
 
 	if *runLogSearchString != "" {
 		conf.LogSearchString = *runLogSearchString
 		conf.EnforceOnStartup = false
 		conf.SyscallsKillTargetIfNotAllowed = false
-		conf.EnforceOnStartup = false
+	}
+
+	if len(allowList.Syscalls) > 0 {
+		conf.SyscallsAllowList = allowList.Syscalls
+		conf.SyscallsAllowMap = runtime.CreateSyscallAllowMap(conf.SyscallsAllowList)
+		conf.SyscallsKillTargetIfNotAllowed = true
 	}
 
 	if mode == "trace" {
@@ -49,36 +140,7 @@ func startTracee(c context.Context) context.Context {
 		os.Exit(1)
 	}
 
-	conf.VerboseLog = *verbose
-	args := runCmd.Args()
-
-	if conf.VerboseLog {
-		println(fmt.Sprintf("%v", args))
-		println(fmt.Sprintf("%s", mode))
-		println(fmt.Sprintf("%s", *runLogSearchString))
-	}
-
-	cmd, err := uroot.Exec(traceeCtx, args[0], args[1:])
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	ctx, cancel := context.WithCancel(c)
-	go func() {
-
-		for {
-			time.Sleep(1 * time.Second)
-			var status syscall.WaitStatus
-			p, _ := syscall.Wait4(cmd.Process.Pid, &status, syscall.WNOHANG, nil)
-			if p != 0 {
-				cancel()
-				break
-			}
-		}
-
-	}()
-
-	return ctx
+	return runCmd.Args()
 }
 
 func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
@@ -86,10 +148,8 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 
 	select {
 	case <-signal.Done():
-		// logger.Info("Signal received. Stopping.")
 		break
 	case <-tracee.Done():
-		// logger.Info("Tracee stopped. Stopping.")
 		break
 	}
 
@@ -97,11 +157,25 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 	time.Sleep(1 * time.Second)
 
 	stop()
-
-	// logger.Info("Signal received. Stopping tracee.")
-	// logger.Info("Signal received. Waiting for tracee to stop.")
 	<-tracee.Done()
-	// logger.Info("Shutting down.")
 
-	os.Exit(0)
+	// collect exit code of tracee
+	traceeCancelCause := context.Cause(tracee)
+	e := &uroot.ExitEventError{}
+	errors.As(traceeCancelCause, &e)
+
+	// override exit code if tracee was force killed
+	exitCode := 0
+
+	if e.ExitEvent != nil {
+		exitCode = e.ExitEvent.WaitStatus.ExitStatus()
+	}
+
+	if exitCode == 0 && uroot.GetTraceeWasForceKilled() {
+		exitCode = 1
+	}
+
+	println(fmt.Sprintf("Exiting with code %d", exitCode))
+	// exit
+	os.Exit(exitCode)
 }

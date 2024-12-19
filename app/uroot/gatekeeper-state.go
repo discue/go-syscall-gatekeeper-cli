@@ -3,6 +3,7 @@ package uroot
 var enforced = false
 var syscallsBeforeEnforce = make(map[string]int64)
 var syscallsAfterEnforce = make(map[string]int64)
+var wasForceKilled = false
 
 func enforceGatekeeper() {
 	enforced = true
@@ -10,6 +11,14 @@ func enforceGatekeeper() {
 
 func GetIsGatekeeperEnforced() bool {
 	return enforced
+}
+
+func GetTraceeWasForceKilled() bool {
+	return wasForceKilled
+}
+
+func SetTraceeWasForceKilled(b bool) {
+	wasForceKilled = b
 }
 
 func addSyscallToCollection(rax uint64, name string) {

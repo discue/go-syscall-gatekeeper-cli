@@ -56,7 +56,7 @@ type Task interface {
 	Name() string
 }
 
-func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
+func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Context, error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Cancel = func() error {
@@ -89,7 +89,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
 	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("error creating stdout pipe: %w", err)
+		return nil, nil, fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
 	if runtimeConfig.Get().EnforceOnStartup == true {
@@ -136,21 +136,21 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, error) {
 	// setup goroutines to read and print errout
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("error creating stderr pipe: %w", err)
+		return nil, nil, fmt.Errorf("error creating stderr pipe: %w", err)
 	}
 	stdout.PipeStdErr(ctx, stderrPipe)
 
+	exitContext, cancel := context.WithCancelCause(ctx)
 	go func() {
-		tracerCtx, _ := context.WithCancel(ctx)
-		Strace(cmd, tracerCtx, os.Stdout)
+		Strace(cmd, cancel, os.Stdout)
 	}()
 
-	return cmd, nil
+	return cmd, exitContext, nil
 }
 
 // Strace traces and prints process events for `c` and its children to `out`.
-func Strace(c *exec.Cmd, ctx context.Context, out io.Writer) error {
-	return Trace(c, ctx, PrintTraces(out))
+func Strace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, out io.Writer) error {
+	return Trace(c, cancelFunc, PrintTraces(out))
 }
 
 // Trace traces `c` and any children c clones.
@@ -159,7 +159,7 @@ func Strace(c *exec.Cmd, ctx context.Context, out io.Writer) error {
 //
 // recordCallback is called every time a process event happens with the process
 // in a stopped state.
-func Trace(c *exec.Cmd, ctx context.Context, recordCallback ...EventCallback) error {
+func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...EventCallback) error {
 	if !atomic.CompareAndSwapUint32(&traceActive, 0, 1) {
 		return fmt.Errorf("a process trace is already active in this process")
 	}
@@ -246,5 +246,5 @@ func Trace(c *exec.Cmd, ctx context.Context, recordCallback ...EventCallback) er
 		}
 	}
 
-	return tracer.runLoop()
+	return tracer.runLoop(cancelFunc)
 }

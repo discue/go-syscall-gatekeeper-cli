@@ -1,6 +1,8 @@
 package uroot
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"syscall"
 	"time"
@@ -9,6 +11,14 @@ import (
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
+
+type ExitEventError struct {
+	ExitEvent *ExitEvent
+}
+
+func (e *ExitEventError) Error() string {
+	return fmt.Sprintf("Exited with status %d", e.ExitEvent.WaitStatus.ExitStatus())
+}
 
 // EventType describes a process event.
 type EventType int
@@ -88,8 +98,8 @@ func (t *tracer) addProcess(pid int, event EventType) {
 	}
 }
 
-func (t *tracer) runLoop() error {
-	for t.stop == false {
+func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
+	for {
 		// TODO: we cannot have any other children. I'm not sure this
 		// is actually solvable: if we used a session or process group,
 		// a tracee process's usage of them would mess up our accounting.
@@ -161,6 +171,8 @@ func (t *tracer) runLoop() error {
 				addSyscallToCollection(rax, name)
 				if runtime.Get().SyscallsKillTargetIfNotAllowed {
 					if runtime.Get().SyscallsAllowMap[name] == false {
+						fmt.Println("Syscall not allowed:", name)
+						SetTraceeWasForceKilled(true)
 						injectSignal = syscall.SIGKILL
 					}
 				}
@@ -237,6 +249,11 @@ func (t *tracer) runLoop() error {
 
 		if rec.Event == SignalExit || rec.Event == Exit {
 			delete(t.processes, pid)
+			if len(t.processes) < 1 {
+				cancelFunc(&ExitEventError{
+					ExitEvent: rec.Exit,
+				})
+			}
 			continue
 		}
 
