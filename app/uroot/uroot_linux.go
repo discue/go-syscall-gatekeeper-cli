@@ -186,12 +186,6 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 		callback:  recordCallback,
 	}
 
-	go func() {
-		<-ctx.Done()
-		// logger.Info("Stopping tracer")
-		tracer.terminate()
-	}()
-
 	// Start will fork, set PTRACE_TRACEME, and then execve. Once that
 	// happens, we should be stopped at the execve "exit". This wait will
 	// return at that exit point.

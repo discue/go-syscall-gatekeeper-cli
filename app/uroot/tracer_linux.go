@@ -60,7 +60,6 @@ const (
 type tracer struct {
 	processes map[int]*process
 	callback  []EventCallback
-	stop      bool
 }
 
 // SignalEvent is a signal that was delivered to the process.
@@ -69,14 +68,6 @@ type SignalEvent struct {
 	Signal unix.Signal
 
 	// TODO: Add other siginfo_t stuff
-}
-
-func (t *tracer) terminate() {
-	// for pid, _ := range t.processes {
-	// 	logger.Info(fmt.Sprintf("Terminating pid %d", pid))
-	// 	syscall.Kill(pid, syscall.SIGINT)
-	// }
-	t.stop = true
 }
 
 func (t *tracer) call(p *process, rec *TraceRecord) error {
@@ -261,8 +252,6 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			return err
 		}
 	}
-
-	return nil
 }
 
 func wait(pid int) (int, unix.WaitStatus, error) {
