@@ -41,7 +41,7 @@ func Load() {
 		panic(fmt.Sprintf("unable to read environment configuration %s", err.Error()))
 	}
 
-	s.SyscallsAllowMap = createSyscallMap(s.SyscallsAllowList)
+	s.SyscallsAllowMap = CreateSyscallAllowMap(s.SyscallsAllowList)
 	c = &s
 }
 
@@ -57,7 +57,7 @@ func reset() {
 	c = nil
 }
 
-func createSyscallMap(syscallAllowList []string) map[string]bool {
+func CreateSyscallAllowMap(syscallAllowList []string) map[string]bool {
 	defaultAllowDeny := len(syscallAllowList) == 0
 	syscalls := make(map[string]bool)
 
