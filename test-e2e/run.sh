@@ -4,7 +4,7 @@ set -uo pipefail
 
 main_path=""
 current_dir=$(pwd)
-exitCode=0
+testExitCode=0
 
 while true; do
     if [[ -f "$current_dir/main.go" ]]; then
@@ -28,12 +28,12 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
         elif [ $exitCode -eq 124 ]; then
         echo -e "\e[33mtimeout\033[0m $file"
         echo -e "$output"
-        exitCode=1
+        testExitCode=1
     else
         echo -e "\e[91mfailed\033[0m $file"
         echo -e ">> Expected exit code 0 and got $exitCode"
         echo -e "$output"
-        exitCode=1
+        testExitCode=1
     fi
     
     if [[ -d ".tmp" ]]; then
@@ -42,4 +42,4 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
     
 done
 
-exit $exitCode
+exit $testExitCode
