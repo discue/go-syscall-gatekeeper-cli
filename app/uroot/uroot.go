@@ -118,7 +118,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 					os.Stdout.WriteString("\n")
 
 					if strings.Contains(t, runtimeConfig.Get().LogSearchString) {
-						logger.Info("Enabling gatekeeper now because log search string was detected.")
+						println("Enabling gatekeeper now because log search string was detected.")
 						enforceGatekeeper()
 						brkLoop = true
 					}
