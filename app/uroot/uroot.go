@@ -35,6 +35,7 @@ var traceActive uint32
 type ExitEvent struct {
 	// WaitStatus is the exit status.
 	WaitStatus unix.WaitStatus
+	Signal     string
 }
 
 // NewChildEvent is emitted when a clone/fork/vfork syscall is done.

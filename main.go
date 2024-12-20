@@ -173,15 +173,13 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 	e := &uroot.ExitEventError{}
 	errors.As(traceeCancelCause, &e)
 
-	// override exit code if tracee was force killed
 	exitCode := 0
-
 	if e.ExitEvent != nil {
-		exitCode = e.ExitEvent.WaitStatus.ExitStatus()
-	}
-
-	if exitCode == 0 && uroot.GetTraceeWasForceKilled() {
-		exitCode = 1
+		if e.ExitEvent.Signal != "" {
+			exitCode = 111
+		} else {
+			exitCode = e.ExitEvent.WaitStatus.ExitStatus()
+		}
 	}
 
 	println(fmt.Sprintf("Exiting with code %d", exitCode))

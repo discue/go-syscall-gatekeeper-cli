@@ -163,7 +163,6 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 				if runtime.Get().SyscallsKillTargetIfNotAllowed {
 					if runtime.Get().SyscallsAllowMap[name] == false {
 						fmt.Println("Syscall not allowed:", name)
-						SetTraceeWasForceKilled(true)
 						injectSignal = syscall.SIGKILL
 					}
 				}

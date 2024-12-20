@@ -13,14 +13,6 @@ func GetIsGatekeeperEnforced() bool {
 	return enforced
 }
 
-func GetTraceeWasForceKilled() bool {
-	return wasForceKilled
-}
-
-func SetTraceeWasForceKilled(b bool) {
-	wasForceKilled = b
-}
-
 func addSyscallToCollection(rax uint64, name string) {
 	// key := fmt.Sprintf("%d->%s", rax, name)
 	key := name
