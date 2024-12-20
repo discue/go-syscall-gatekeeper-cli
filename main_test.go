@@ -8,12 +8,39 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNoImplicitAllow(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--no-implicit-allow", "true"}
+
+	configureAndParseArgs()
+	a.Empty(runtime.Get().SyscallsAllowList)
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
+func TestAllowFileSystemReadAccess(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--allow-file-system-read", "ls", "-l"}
+
+	configureAndParseArgs()
+	a.Contains(runtime.Get().SyscallsAllowList, "read")
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
+func TestAllowFileSystemWriteAccess(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--allow-file-system-write", "ls", "-l"}
+
+	configureAndParseArgs()
+	a.Contains(runtime.Get().SyscallsAllowList, "write")
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
 func TestAllowFileSystemAccess(t *testing.T) {
 	a := assert.New(t)
 	os.Args = []string{"", "run", "--allow-file-system", "ls", "-l"}
 
 	configureAndParseArgs()
-	a.Contains(runtime.Get().SyscallsAllowList, "open")
+	a.Contains(runtime.Get().SyscallsAllowList, "openat2")
 	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 

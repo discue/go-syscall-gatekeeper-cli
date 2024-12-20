@@ -8,9 +8,27 @@ func NewSyscallAllowList() *SyscallAllowList {
 	return &SyscallAllowList{}
 }
 
-func (sal *SyscallAllowList) AllowAllFileSystemAccess() {
-	sal.Syscalls = append(sal.Syscalls, syscallMap["File Operations"]...)
+func (sal *SyscallAllowList) AllowAllFileSystemReadAccess() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Read Operations"]...)
+}
+
+func (sal *SyscallAllowList) AllowAllFileSystemWriteAccess() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Write Operations"]...)
+}
+
+func (sal *SyscallAllowList) AllowAllFilePermissions() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Permissions"]...)
+}
+
+func (sal *SyscallAllowList) AllowAllFileDescriptors() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["File Descriptor Operations"]...)
+}
+
+func (sal *SyscallAllowList) AllowAllFileSystemAccess() {
+	sal.AllowAllFileSystemReadAccess()
+	sal.AllowAllFileSystemWriteAccess()
+	sal.AllowAllFilePermissions()
+	sal.AllowAllFileDescriptors()
 }
 
 // func (sal *SyscallAllowList) AllowFileRead() {

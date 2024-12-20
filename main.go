@@ -46,6 +46,8 @@ func configureAndParseArgs() []string {
 	verbose := runCmd.Bool("verbose", false, "a bool")
 
 	// permissions
+	allowFileSystemReadAccess := runCmd.Bool("allow-file-system-read", false, "a bool")
+	allowFileSystemWriteAccess := runCmd.Bool("allow-file-system-write", false, "a bool")
 	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "a bool")
 	allowProcessManagement := runCmd.Bool("allow-process-management", false, "a bool")
 	allowNetworking := runCmd.Bool("allow-networking", false, "a bool")
@@ -64,7 +66,14 @@ func configureAndParseArgs() []string {
 
 	allowList := runtime.NewSyscallAllowList()
 
-	if *allowFileSystemAccess {
+	if *allowFileSystemWriteAccess {
+		allowList.AllowAllFileSystemWriteAccess()
+		allowList.AllowAllFileSystemReadAccess()
+		allowList.AllowAllFileDescriptors()
+	} else if *allowFileSystemReadAccess {
+		allowList.AllowAllFileSystemReadAccess()
+		allowList.AllowAllFileDescriptors()
+	} else if *allowFileSystemAccess {
 		allowList.AllowAllFileSystemAccess()
 	}
 
