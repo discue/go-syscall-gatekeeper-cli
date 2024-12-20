@@ -161,7 +161,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 
 				addSyscallToCollection(rax, name)
 				if runtime.Get().SyscallsKillTargetIfNotAllowed {
-					if runtime.Get().SyscallsAllowMap[name] == false {
+					if !allowSyscall(name) {
 						fmt.Println("Syscall not allowed:", name)
 						injectSignal = syscall.SIGKILL
 					}
@@ -237,11 +237,23 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			return err
 		}
 
-		if rec.Event == SignalExit || rec.Event == Exit {
+		if rec.Event == Exit {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
 				cancelFunc(&ExitEventError{
 					ExitEvent: rec.Exit,
+				})
+			}
+			continue
+		}
+
+		if rec.Event == SignalExit {
+			delete(t.processes, pid)
+			if len(t.processes) < 1 {
+				cancelFunc(&ExitEventError{
+					ExitEvent: &ExitEvent{
+						Signal: signalString(rec.SignalExit.Signal),
+					},
 				})
 			}
 			continue
