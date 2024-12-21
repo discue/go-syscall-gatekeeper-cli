@@ -1,5 +1,5 @@
 #!/bin/bash
 
-set -ex
+set -e
 
-cd test-e2e && ./run.sh
+cd test-e2e && ./run.sh $@
