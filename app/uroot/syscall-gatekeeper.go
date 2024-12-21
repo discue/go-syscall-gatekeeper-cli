@@ -5,9 +5,5 @@ import (
 )
 
 func allowSyscall(name string) bool {
-	if runtime.Get().SyscallsAllowMap[name] == false {
-		return false
-	}
-
-	return true
+	return runtime.Get().SyscallsAllowMap[name]
 }
