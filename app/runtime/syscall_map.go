@@ -256,7 +256,7 @@ var syscallMap = map[string][]string{
 		"seccomp",
 	},
 	"System Information": []string{
-		"getcpu",
+		// "getcpu",
 		"uname",
 		"sysinfo",
 		"getrlimit",
