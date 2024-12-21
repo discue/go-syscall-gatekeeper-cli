@@ -70,9 +70,13 @@ func configureAndParseArgs() []string {
 		allowList.AllowAllFileSystemWriteAccess()
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
+		runtime.Get().FsConfig.FilesystemAllowRead = true
+		runtime.Get().FsConfig.FilesystemAllowWrite = true
 	} else if *allowFileSystemReadAccess {
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
+		runtime.Get().FsConfig.FilesystemAllowRead = true
+		runtime.Get().FsConfig.FilesystemAllowWrite = false
 	} else if *allowFileSystemAccess {
 		allowList.AllowAllFileSystemAccess()
 	}
