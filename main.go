@@ -128,6 +128,7 @@ func configureAndParseArgs() []string {
 		allowList.AllowSignals()
 		allowList.AllowMisc()
 		allowList.AllowSecurityAndPermissions()
+		allowList.AllowSystemInformation()
 	}
 
 	conf.VerboseLog = *verbose
