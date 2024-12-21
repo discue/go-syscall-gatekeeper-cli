@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/discue/go-syscall-gatekeeper/app/runtime"
+	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls/args"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )
@@ -162,8 +163,23 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 				addSyscallToCollection(rax, name)
 				if runtime.Get().SyscallsKillTargetIfNotAllowed {
 					if !allowSyscall(name) {
-						fmt.Println("Syscall not allowed:", name)
-						injectSignal = syscall.SIGKILL
+						deny := true
+
+						if name == "write" {
+							syscallArgs := rec.Syscall.Args
+							fd := syscallArgs[0].Int()
+							isStdStream := args.IsStandardStream(fd)
+							println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
+							if isStdStream {
+								// we allow writing to standard streams
+								deny = false
+							}
+						}
+
+						if deny {
+							fmt.Println("Syscall not allowed:", name)
+							injectSignal = syscall.SIGKILL
+						}
 					}
 				}
 
