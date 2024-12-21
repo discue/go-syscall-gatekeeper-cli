@@ -178,8 +178,8 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 						}
 					} else {
 						if name == "openat" &&
-							runtime.Get().FilesystemAllowRead &&
-							!runtime.Get().FilesystemAllowWrite {
+							runtime.Get().FileSystemAllowRead &&
+							!runtime.Get().FileSystemAllowWrite {
 							// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
 							args := rec.Syscall.Args
 							mode := args[3].ModeT() // Assuming mode_t is represented as uint
