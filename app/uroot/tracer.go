@@ -214,7 +214,6 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 
 					if !allow {
 						fmt.Println("Syscall not allowed:", name)
-						fmt.Println("allow:%t, allowSyscall(%s):%t", allow)
 						injectSignal = syscall.SIGKILL
 					}
 				}
