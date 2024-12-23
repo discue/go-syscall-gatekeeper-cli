@@ -12,7 +12,11 @@ go run $main_path run \
 --allow-memory-management \
 --allow-process-synchronization \
 --allow-misc \
-wget -O - .tmp google.com
+nc -w 1 example.com 80 << EOF
+GET / HTTP/1.1
+Host: example.com
+
+EOF
 
 if [[ $? -ne 0 ]]; then
     exit 0

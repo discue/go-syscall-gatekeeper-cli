@@ -6,7 +6,7 @@ declare -r main_path="$1"
 
 touch .tmp/test.txt
 
-go run $main_path run --allow-file-system curl 123112311.com
+go run $main_path run --allow-file-system-read --allow-network-client curl 123112311.com
 
 if [[ $? -ne 0 ]]; then
     exit 0
