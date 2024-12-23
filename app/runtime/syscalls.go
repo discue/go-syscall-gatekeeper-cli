@@ -49,18 +49,17 @@ func (sal *SyscallAllowList) AllowProcessManagement() {
 // }
 
 func (sal *SyscallAllowList) AllowNetworking() {
-	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking"]...)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Client"]...)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Server"]...)
 }
 
-// func (sal *SyscallAllowList) AllowNetworkIncoming() {
-// 	sal.syscalls = append(sal.syscalls, syscallMap["Network Management - Incoming Connections"]...)
+func (sal *SyscallAllowList) AllowNetworkClient() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Client"]...)
+}
 
-// }
-
-// func (sal *SyscallAllowList) AllowNetworkOther() {
-// 	sal.syscalls = append(sal.syscalls, syscallMap["Network Management - Other Operations"]...)
-
-// }
+func (sal *SyscallAllowList) AllowNetworkServer() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Server"]...)
+}
 
 func (sal *SyscallAllowList) AllowMemoryManagement() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["Memory Management"]...)

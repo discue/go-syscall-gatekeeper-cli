@@ -53,6 +53,24 @@ func TestAllowProcessManagement(t *testing.T) {
 	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 
+func TestAllowNetworkClient(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--allow-network-client", "curl", "https://google.com"}
+
+	configureAndParseArgs()
+	a.Contains(runtime.Get().SyscallsAllowList, "connect")
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
+func TestAllowNetworkServer(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--allow-network-server", "true"}
+
+	configureAndParseArgs()
+	a.Contains(runtime.Get().SyscallsAllowList, "accept")
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
 func TestAllowNetworking(t *testing.T) {
 	a := assert.New(t)
 	os.Args = []string{"", "run", "--allow-networking", "curl", "https://google.com"}

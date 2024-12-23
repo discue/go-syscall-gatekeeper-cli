@@ -25,6 +25,24 @@ func TestAllowProcessManagement(t *testing.T) {
 	a.Contains(sal.Syscalls, "fork")
 }
 
+func TestAllowNetworkClient(t *testing.T) {
+	a := assert.New(t)
+	sal := NewSyscallAllowList()
+	sal.AllowNetworkClient()
+
+	a.NotEmpty(sal.Syscalls)
+	a.Contains(sal.Syscalls, "connect")
+}
+
+func TestAllowNetworkServer(t *testing.T) {
+	a := assert.New(t)
+	sal := NewSyscallAllowList()
+	sal.AllowNetworkServer()
+
+	a.NotEmpty(sal.Syscalls)
+	a.Contains(sal.Syscalls, "accept")
+}
+
 func TestAllowNetworking(t *testing.T) {
 	a := assert.New(t)
 	sal := NewSyscallAllowList()

@@ -25,6 +25,11 @@ type FsConfig struct {
 	FileSystemAllowWrite bool `split_words:"true" default:"false"`
 }
 
+type NetworkConfig struct {
+	NetworkAllowClient bool `split_words:"true" default:"false"`
+	NetworkAllowServer bool `split_words:"true" default:"false"`
+}
+
 type GatekeeperConfig struct {
 	EnforceOnStartup bool           `split_words:"true" default:"true"`
 	ExecutionMode    EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
@@ -35,6 +40,7 @@ type GatekeeperConfig struct {
 type Config struct {
 	FsConfig
 	GatekeeperConfig
+	NetworkConfig
 	SyscallConfig
 }
 

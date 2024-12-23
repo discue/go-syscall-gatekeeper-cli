@@ -48,6 +48,8 @@ func configureAndParseArgs() []string {
 	// permissions
 	allowFileSystemReadAccess := runCmd.Bool("allow-file-system-read", false, "a bool")
 	allowFileSystemWriteAccess := runCmd.Bool("allow-file-system-write", false, "a bool")
+	allowNetworkClient := runCmd.Bool("allow-network-client", false, "a bool")
+	allowNetworkServer := runCmd.Bool("allow-network-server", false, "a bool")
 	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "a bool")
 	allowProcessManagement := runCmd.Bool("allow-process-management", false, "a bool")
 	allowNetworking := runCmd.Bool("allow-networking", false, "a bool")
@@ -83,6 +85,14 @@ func configureAndParseArgs() []string {
 
 	if *allowProcessManagement {
 		allowList.AllowProcessManagement()
+	}
+
+	if *allowNetworkClient {
+		allowList.AllowNetworkClient()
+	}
+
+	if *allowNetworkServer {
+		allowList.AllowNetworkServer()
 	}
 
 	if *allowNetworking {
