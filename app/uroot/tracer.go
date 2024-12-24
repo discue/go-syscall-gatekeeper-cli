@@ -158,63 +158,69 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 				}
 
 				rax := rec.Syscall.Regs.Orig_rax
-				name, _ := sec.ScmpSyscall(rax).GetName()
+				name, err := sec.ScmpSyscall(rec.Syscall.Sysno).GetName()
+				if err != nil {
+					fmt.Println(fmt.Sprintf("unknown 1syscall %s %d", err.Error(), rax))
+					injectSignal = syscall.SIGKILL
+					fmt.Println("force kill")
+				} else {
 
-				addSyscallToCollection(rax, name)
-				if runtime.Get().SyscallsKillTargetIfNotAllowed {
+					addSyscallToCollection(rax, name)
+					if runtime.Get().SyscallsKillTargetIfNotAllowed {
 
-					allow := allowSyscall(name)
+						allow := allowSyscall(name)
 
-					if !allow {
-						if name == "write" {
-							syscallArgs := rec.Syscall.Args
-							fd := syscallArgs[0].Int()
-							isStdStream := args.IsStandardStream(fd)
-							println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
-							if isStdStream {
-								// we allow writing to standard streams
-								allow = true
+						if !allow {
+							if name == "write" {
+								syscallArgs := rec.Syscall.Args
+								fd := syscallArgs[0].Int()
+								isStdStream := args.IsStandardStream(fd)
+								println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
+								if isStdStream {
+									// we allow writing to standard streams
+									allow = true
+								}
+							}
+						} else {
+							if name == "openat" &&
+								runtime.Get().FileSystemAllowRead &&
+								!runtime.Get().FileSystemAllowWrite {
+								// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
+								args := rec.Syscall.Args
+								mode := args[3].ModeT() // Assuming mode_t is represented as uint
+
+								accessMode := ""
+								if mode&unix.O_RDONLY == unix.O_RDONLY {
+									accessMode = "read"
+								}
+								if mode&unix.O_WRONLY == unix.O_WRONLY {
+									accessMode = "write"
+								}
+								if mode&unix.O_RDWR == unix.O_RDWR {
+									accessMode = "write"
+								}
+								if mode&unix.O_RDWR == unix.O_APPEND {
+									accessMode = "write"
+								}
+								if mode&unix.O_RDWR == unix.O_CREAT {
+									accessMode = "write"
+								}
+								if mode&unix.O_RDWR == unix.O_TRUNC {
+									accessMode = "write"
+								}
+
+								println(fmt.Printf("access mode is %s\n", accessMode))
+
+								if accessMode != "read" {
+									allow = false
+								}
 							}
 						}
-					} else {
-						if name == "openat" &&
-							runtime.Get().FileSystemAllowRead &&
-							!runtime.Get().FileSystemAllowWrite {
-							// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
-							args := rec.Syscall.Args
-							mode := args[3].ModeT() // Assuming mode_t is represented as uint
 
-							accessMode := ""
-							if mode&unix.O_RDONLY == unix.O_RDONLY {
-								accessMode = "read"
-							}
-							if mode&unix.O_WRONLY == unix.O_WRONLY {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_RDWR {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_APPEND {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_CREAT {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_TRUNC {
-								accessMode = "write"
-							}
-
-							println(fmt.Printf("access mode is %s\n", accessMode))
-
-							if accessMode != "read" {
-								allow = false
-							}
+						if !allow {
+							fmt.Println("Syscall not allowed:", name)
+							injectSignal = syscall.SIGKILL
 						}
-					}
-
-					if !allow {
-						fmt.Println("Syscall not allowed:", name)
-						injectSignal = syscall.SIGKILL
 					}
 				}
 
