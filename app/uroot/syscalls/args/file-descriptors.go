@@ -1,20 +1,11 @@
 package args
 
 import (
+	"fmt"
 	"os"
+	"syscall"
 
 	"golang.org/x/sys/unix"
-)
-
-const (
-	// from https://github.com/golang/go/blob/669d87a935536eb14cb2db311a83345359189924/src/archive/tar/common.go#L627
-	ISDIR  = 040000  // Directory
-	ISFIFO = 010000  // FIFO
-	ISREG  = 0100000 // Regular file
-	ISLNK  = 0120000 // Symbolic link
-	ISBLK  = 060000  // Block special file
-	ISCHR  = 020000  // Character special file
-	ISSOCK = 0140000 // Socket
 )
 
 var (
@@ -40,44 +31,67 @@ func IsStandardStream(fd int32) bool {
 	return IsStdIn(fd) || IsStdOut(fd) || IsStdErr(fd)
 }
 
-func statFd(fd int32) (unix.Stat_t, error) {
+func LstatFd(pid int, fd int32) (unix.Stat_t, error) {
+	path := fmt.Sprintf("/proc/%d/fd/%d", pid, fd)
 	var stat unix.Stat_t
-	err := unix.Fstat(int(fd), &stat) // Fstat takes int, not int32
+	err := unix.Stat(path, &stat) // Fstat takes int, not int32
 	return stat, err
 }
 
-func isFdType(fd int32, fdConstant uint32) bool {
-	stat, err := statFd(fd)
+func isFdType(pid int, fd int32, fdConstant uint32) bool {
+	stat, err := LstatFd(pid, fd)
 	if err != nil {
+		fmt.Println(fmt.Sprintf("error stating fd %d: %v", fd, err))
 		return false
 	}
 	return stat.Mode&fdConstant == fdConstant
 }
 
-func IsFile(fd int32) bool {
-	return isFdType(fd, ISREG)
+func IsFile(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFREG)
 }
 
-func IsDir(fd int32) bool {
-	return isFdType(fd, ISDIR)
+func IsDir(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFDIR)
 }
 
-func IsSymlink(fd int32) bool {
-	return isFdType(fd, ISLNK)
+func IsSymlink(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFLNK)
 }
 
-func IsBlockDevice(fd int32) bool {
-	return isFdType(fd, ISBLK)
+func IsBlockDevice(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFBLK)
 }
 
-func IsCharDevice(fd int32) bool {
-	return isFdType(fd, ISCHR)
+func IsCharDevice(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFCHR)
 }
 
-func IsSocket(fd int32) bool {
-	return isFdType(fd, ISSOCK)
+func IsSocket(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFSOCK)
 }
 
-func IsPipe(fd int32) bool {
-	return isFdType(fd, ISFIFO)
+func IsPipe(pid int, fd int32) bool {
+	return isFdType(pid, fd, syscall.S_IFIFO)
+}
+
+func FdType(pid int, fd int32) string {
+	if IsFile(pid, fd) {
+		return "file"
+	} else if IsSymlink(pid, fd) {
+		return "symlink"
+	} else if IsBlockDevice(pid, fd) {
+		return "block device"
+	} else if IsCharDevice(pid, fd) {
+		return "char device"
+	} else if IsSocket(pid, fd) {
+		return "socket"
+	} else if IsPipe(pid, fd) {
+		return "pipe"
+	} else if IsStandardStream(fd) {
+		return "standard stream"
+	} else if IsDir(pid, fd) {
+		return "dir"
+	}
+	return "unknown"
 }

@@ -57,7 +57,7 @@ func TestIsFile(t *testing.T) {
 	a.NoError(err)
 
 	defer os.Remove(f.Name())
-	a.True(IsFile(int32(f.Fd())))
+	a.True(IsFile(os.Getpid(), int32(f.Fd())))
 }
 
 func TestIsDir(t *testing.T) {
@@ -70,7 +70,7 @@ func TestIsDir(t *testing.T) {
 	f, _ := os.OpenFile(dir, os.O_RDONLY, 0)
 	defer f.Close()
 
-	a.True(IsDir(int32(f.Fd())))
+	a.True(IsDir(os.Getpid(), int32(f.Fd())))
 }
 
 func TestIsSymlink(t *testing.T) {
@@ -90,7 +90,7 @@ func TestIsSymlink(t *testing.T) {
 	fd, err := unix.Open(link, unix.O_PATH|unix.O_NOFOLLOW, 0)
 	a.NoError(err)
 	defer unix.Close(fd)
-	a.True(IsSymlink(int32(fd)))
+	a.True(IsSymlink(os.Getpid(), int32(fd)))
 }
 
 func TestIsBlockDevice(t *testing.T) {
@@ -116,7 +116,7 @@ func TestIsSocket(t *testing.T) {
 	a.NoError(err)
 	defer file.Close() // Important: Close the file to release resources
 
-	a.True(IsSocket(int32(file.Fd()))) // Now you can check the FD
+	a.True(IsSocket(os.Getpid(), int32(file.Fd()))) // Now you can check the FD
 }
 
 func TestIsPipe(t *testing.T) {
@@ -127,6 +127,6 @@ func TestIsPipe(t *testing.T) {
 	defer r.Close()
 	defer w.Close()
 
-	a.True(IsPipe(int32(r.Fd())))
-	a.True(IsPipe(int32(w.Fd())))
+	a.True(IsPipe(os.Getpid(), int32(r.Fd())))
+	a.True(IsPipe(os.Getpid(), int32(w.Fd())))
 }
