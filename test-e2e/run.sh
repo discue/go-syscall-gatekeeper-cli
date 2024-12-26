@@ -65,8 +65,12 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
         "$dir/before.sh"
     fi
     
+    echo -ne "\e[36mpending\033[0m $file\033[K\r"
+    
     output=$("timeout" "20s" "$file" "$main_path" 2>&1)
     exitCode=$?
+    
+    echo -ne "\033[K\r" # reset previous log line to give the impression of overriding it
     
     if [ $exitCode -eq 0 ]; then
         echo -e "\e[32mok\033[0m $file "
