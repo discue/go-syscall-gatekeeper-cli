@@ -54,9 +54,16 @@ trap 'rm -rf .tmp || true' EXIT # always clean up before exit
 for file in $(find . -mindepth 2 -type f -name "*.sh"); do
     if [[ "$only_pattern" != "*" && ! "$file" =~ $only_pattern ]]; then
         continue
+        elif [[ "$file" =~ "before.sh" ]]; then
+        continue
     fi
     
     mkdir .tmp
+    
+    dir=$(dirname $file)
+    if [[ -f "$dir/before.sh" ]]; then
+        "$dir/before.sh"
+    fi
     
     output=$("timeout" "20s" "$file" "$main_path" 2>&1)
     exitCode=$?
