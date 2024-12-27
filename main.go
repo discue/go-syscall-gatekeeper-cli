@@ -89,10 +89,12 @@ func configureAndParseArgs() []string {
 
 	if *allowNetworkClient {
 		allowList.AllowNetworkClient()
+		conf.NetworkAllowClient = true
 	}
 
 	if *allowNetworkServer {
 		allowList.AllowNetworkServer()
+		conf.NetworkAllowServer = true
 	}
 
 	if *allowNetworking {
