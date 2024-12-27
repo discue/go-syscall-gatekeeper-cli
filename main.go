@@ -146,7 +146,6 @@ func configureAndParseArgs() []string {
 	if *runLogSearchString != "" {
 		conf.LogSearchString = *runLogSearchString
 		conf.EnforceOnStartup = false
-		conf.SyscallsKillTargetIfNotAllowed = false
 	}
 
 	if len(allowList.Syscalls) > 0 {

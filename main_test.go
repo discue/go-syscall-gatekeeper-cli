@@ -158,7 +158,15 @@ func TestLogSearchString(t *testing.T) {
 	configureAndParseArgs()
 	a.Equal("test", runtime.Get().LogSearchString)
 	a.False(runtime.Get().EnforceOnStartup)
-	a.False(runtime.Get().SyscallsKillTargetIfNotAllowed)
+}
+
+func TestLogSearchStringKillTarget(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--log-search-string", "test", "true"}
+
+	configureAndParseArgs()
+	a.Equal("test", runtime.Get().LogSearchString)
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 
 func TestVerboseLog(t *testing.T) {
