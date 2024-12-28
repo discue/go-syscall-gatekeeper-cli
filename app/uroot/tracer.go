@@ -14,11 +14,12 @@ import (
 )
 
 type ExitEventError struct {
-	ExitEvent *ExitEvent
+	ExitCode int
+	Signal   string
 }
 
 func (e *ExitEventError) Error() string {
-	return fmt.Sprintf("Exited with status %d", e.ExitEvent.WaitStatus.ExitStatus())
+	return fmt.Sprintf("Exited with status %d and signal %s", e.ExitCode, e.Signal)
 }
 
 // EventType describes a process event.
@@ -346,7 +347,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
 				cancelFunc(&ExitEventError{
-					ExitEvent: rec.Exit,
+					ExitCode: rec.Exit.WaitStatus.ExitStatus(),
 				})
 			}
 			continue
@@ -356,9 +357,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
 				cancelFunc(&ExitEventError{
-					ExitEvent: &ExitEvent{
-						Signal: signalString(rec.SignalExit.Signal),
-					},
+					Signal: signalString(rec.SignalExit.Signal),
 				})
 			}
 			continue

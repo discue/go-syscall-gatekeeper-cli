@@ -222,12 +222,10 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 	errors.As(traceeCancelCause, &e)
 
 	exitCode := 0
-	if e.ExitEvent != nil {
-		if e.ExitEvent.Signal != "" {
-			exitCode = 111
-		} else {
-			exitCode = e.ExitEvent.WaitStatus.ExitStatus()
-		}
+	if e.Signal != "" {
+		exitCode = 111
+	} else if e.ExitCode != 0 {
+		exitCode = e.ExitCode
 	}
 
 	println(fmt.Sprintf("Exiting with code %d", exitCode))

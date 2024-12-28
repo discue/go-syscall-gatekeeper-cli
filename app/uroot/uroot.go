@@ -35,7 +35,6 @@ var traceActive uint32
 type ExitEvent struct {
 	// WaitStatus is the exit status.
 	WaitStatus unix.WaitStatus
-	Signal     string
 }
 
 // NewChildEvent is emitted when a clone/fork/vfork syscall is done.
@@ -171,6 +170,10 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 	defer runtime.UnlockOSThread()
 
 	if err := c.Start(); err != nil {
+		fmt.Printf("Unable to start process %s\n", err.Error())
+		cancelFunc(&ExitEventError{
+			ExitCode: 2,
+		})
 		return err
 	}
 
