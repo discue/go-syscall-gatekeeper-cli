@@ -16,7 +16,6 @@ func PipeStdErr(ctx context.Context, from io.ReadCloser) {
 }
 
 func pipe(ctx context.Context, from io.ReadCloser, to *os.File) {
-	newCtx, _ := context.WithCancel(ctx)
 	go func() {
 		scanner := bufio.NewScanner(from)
 		for scanner.Scan() {
@@ -25,12 +24,12 @@ func pipe(ctx context.Context, from io.ReadCloser, to *os.File) {
 			}
 
 			select {
-			case <-newCtx.Done():
+			case <-ctx.Done():
 				from.Close()
 				break
 			default:
-				to.WriteString(scanner.Text()) // Print to parent's stdout
-				to.WriteString("\n")
+				_, _ = to.WriteString(scanner.Text()) // Print to parent's stdout
+				_, _ = to.WriteString("\n")
 			}
 		}
 	}()

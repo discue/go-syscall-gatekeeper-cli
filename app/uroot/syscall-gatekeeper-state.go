@@ -3,7 +3,6 @@ package uroot
 var enforced = false
 var syscallsBeforeEnforce = make(map[string]int64)
 var syscallsAfterEnforce = make(map[string]int64)
-var wasForceKilled = false
 
 func enforceGatekeeper() {
 	enforced = true

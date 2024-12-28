@@ -13,10 +13,7 @@ import (
 
 	"github.com/discue/go-syscall-gatekeeper/app/runtime"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot"
-	"github.com/discue/go-syscall-gatekeeper/app/utils"
 )
-
-var logger = utils.NewLogger("main")
 
 type syscallDeniedAction string
 
@@ -49,10 +46,9 @@ func main() {
 }
 
 func startTracee(c context.Context) context.Context {
-	traceeCtx, _ := context.WithCancel(c)
 	args := configureAndParseArgs()
 
-	_, exitContext, err := uroot.Exec(traceeCtx, args[0], args[1:])
+	_, exitContext, err := uroot.Exec(c, args[0], args[1:])
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -89,7 +85,11 @@ func configureAndParseArgs() []string {
 	runCmd.Var(&action, "on-syscall-denied", "Action to take when a syscall is denied: 'kill' or 'error'")
 
 	// parse flags now
-	runCmd.Parse(os.Args[2:])
+	err := runCmd.Parse(os.Args[2:])
+	if err != nil {
+		fmt.Println(err.Error())
+		runCmd.Usage()
+	}
 
 	allowList := runtime.NewSyscallAllowList()
 

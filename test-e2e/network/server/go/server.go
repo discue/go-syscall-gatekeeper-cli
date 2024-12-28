@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello from Go server")
-}
-
 func main() {
 	server := &http.Server{Addr: ":8081", Handler: nil} // Create server instance
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -24,7 +20,7 @@ func main() {
 	}()
 
 	time.Sleep(5 * time.Second)
-	server.Shutdown(ctx)
+	_ = server.Shutdown(ctx)
 
 	// sigChan := make(chan os.Signal, 1)
 	// signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

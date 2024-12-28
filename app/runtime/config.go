@@ -66,10 +66,6 @@ func Get() *Config {
 	return c
 }
 
-func reset() {
-	c = nil
-}
-
 func CreateSyscallAllowMap(syscallAllowList []string) map[string]bool {
 	defaultAllowDeny := len(syscallAllowList) == 0
 	syscalls := make(map[string]bool)

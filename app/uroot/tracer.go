@@ -164,7 +164,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 					// suspicious because the process might not have been stopped by a syscall
 					// but something else, so printing here for now while keeping the tracee
 					// up and running
-					fmt.Println(fmt.Sprintf("unknown 1syscall %s %d", err.Error(), rax))
+					fmt.Printf("Unknown syscall detected: %s %d\n", err.Error(), rax)
 				} else {
 					addSyscallToCollection(rax, name)
 

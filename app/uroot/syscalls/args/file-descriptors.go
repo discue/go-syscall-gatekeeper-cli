@@ -41,7 +41,7 @@ func LstatFd(pid int, fd int32) (unix.Stat_t, error) {
 func isFdType(pid int, fd int32, fdConstant uint32) bool {
 	stat, err := LstatFd(pid, fd)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("error stating fd %d: %v", fd, err))
+		fmt.Printf("error stating fd %d: %v\n", fd, err)
 		return false
 	}
 	return stat.Mode&fdConstant == fdConstant

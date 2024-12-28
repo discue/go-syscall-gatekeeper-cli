@@ -65,25 +65,18 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 	}
 
 	if runtimeConfig.Get().ExecutionMode == runtimeConfig.EXECUTION_MODE_TRACE {
-		newCtx, _ := context.WithCancel(ctx)
-
 		go func() {
-
-			select {
-			case <-newCtx.Done():
-				f, _ := os.Create("gk-syscalls-before-enforce.txt")
-				for k, _ := range syscallsBeforeEnforce {
-					f.WriteString(k)
-					f.WriteString("\n")
-				}
-				f, _ = os.Create("gk-syscalls-after-enforce.txt")
-				for k, _ := range syscallsAfterEnforce {
-					f.WriteString(k)
-					f.WriteString("\n")
-				}
-				break
+			<-ctx.Done()
+			f, _ := os.Create("gk-syscalls-before-enforce.txt")
+			for k, _ := range syscallsBeforeEnforce {
+				_, _ = f.WriteString(k)
+				_, _ = f.WriteString("\n")
 			}
-
+			f, _ = os.Create("gk-syscalls-after-enforce.txt")
+			for k, _ := range syscallsAfterEnforce {
+				_, _ = f.WriteString(k)
+				_, _ = f.WriteString("\n")
+			}
 		}()
 	}
 
@@ -93,14 +86,13 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 		return nil, nil, fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
-	if runtimeConfig.Get().EnforceOnStartup == true {
+	if runtimeConfig.Get().EnforceOnStartup {
 		enforceGatekeeper()
 
 		stdout.PipeStdOut(ctx, stdoutPipe)
 		// if we should enable the gatekeeper via log search string
 		// create another goroutine that keeps monitoring stdout
 	} else {
-		newCtx, _ := context.WithCancel(ctx)
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
@@ -110,7 +102,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 
 				brkLoop := false
 				select {
-				case <-newCtx.Done():
+				case <-ctx.Done():
 					stdoutPipe.Close()
 					break
 				default:
@@ -143,7 +135,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 
 	exitContext, cancel := context.WithCancelCause(ctx)
 	go func() {
-		Strace(cmd, cancel, os.Stdout)
+		_ = Strace(cmd, cancel, os.Stdout)
 	}()
 
 	return cmd, exitContext, nil
