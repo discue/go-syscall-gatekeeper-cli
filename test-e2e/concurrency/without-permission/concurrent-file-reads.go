@@ -83,7 +83,7 @@ func main() {
 		fmt.Println("Good times. Goodbye.")
 		os.Exit(0)
 	} else {
-		fmt.Printf("Returning exit code 1")
+		fmt.Println("Returning exit code 1")
 		os.Exit(1)
 	}
 }
