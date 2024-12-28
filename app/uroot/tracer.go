@@ -245,14 +245,15 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 						if runtime.Get().SyscallsDenyTargetIfNotAllowed {
 							fmt.Println("Syscall not allowed. However we don't have permission to kill")
 
+							// https://stackoverflow.com/a/6469069/13163094
 							if rec.Event == SyscallEnter {
-								// Set the return value registers to indicate an error (-1 and errno)
-								rec.Syscall.Regs.Rax = ^uint64(0) // Return -1 for error
-								// Choose an appropriate errno (e.g., EPERM for permission denied)
-								// rec.Syscall.Regs.Rax = uint64(unix.EPERM) // Set errno
+								// Make sure the syscall is not valid anymore by changing the value that identifies it
+								rec.Syscall.Regs.Orig_rax = ^uint64(0)
+								rec.Syscall.Regs.Rax = ^uint64(0)
 							} else if rec.Event == SyscallExit {
 								// Syscall Exit: The kernel sets register rax to the result of the syscall. This is typically 0 for success or -1 (represented as the maximum unsigned integer value) for an error.
-								rec.Syscall.Regs.Rax = ^uint64(0) // Set errno
+								rec.Syscall.Regs.Orig_rax = ^uint64(0)
+								rec.Syscall.Regs.Rax = ^uint64(0)
 								// Syscall Exit: If Rax indicates an error (-1), Rdx will typically contain the specific error code (the errno) explaining the reason for the failure.
 								rec.Syscall.Regs.Rdx = uint64(unix.EPERM) // Set errno
 							}
