@@ -4,13 +4,13 @@ set -uo pipefail
 
 declare -r main_path="$1"
 
-$main_path run --allow-file-system-read --no-implicit-allow grep "done" run.sh
+# Start the server in the background
+nohup $main_path run --allow-file-system-read --allow-network-server ./.tmp/server > /dev/null 2>&1 &
 
-if [[ $? -ne 0 ]]; then
-    exit 0
-fi
+# Get the process ID (PID) of the server process.  Use $! immediately
+server_pid=$!
+trap 'kill -9 $server_pid' EXIT
 
-exit 1
 # Number of retries
 max_retries=5
 

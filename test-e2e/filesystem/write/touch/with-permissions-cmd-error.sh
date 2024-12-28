@@ -4,7 +4,7 @@ set -uo pipefail
 
 declare -r main_path="$1"
 
-$main_path run --allow-file-system-read --no-implicit-allow awk '{print $1}' run.sh
+$main_path run --allow-file-system-write touch .tmp/does-not-exist/test.txt
 
 if [[ $? -ne 0 ]]; then
     exit 0

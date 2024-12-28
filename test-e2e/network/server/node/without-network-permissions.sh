@@ -3,14 +3,14 @@
 set -uo pipefail
 
 declare -r main_path="$1"
+declare -r script_path="$( dirname -- "${BASH_SOURCE[0]}"; )";   # Get the directory name
 
-$main_path run --allow-file-system-read --no-implicit-allow awk '{print $1}' run.sh
+nohup $main_path run --allow-file-system-read node $script_path/server > /dev/null 2>&1 &
 
-if [[ $? -ne 0 ]]; then
-    exit 0
-fi
+server_pid=$!
+trap 'kill -9 $server_pid' EXIT
 
-exit 1
+# Number of retries
 max_retries=5
 
 # Wait for the server to start and check the status code.

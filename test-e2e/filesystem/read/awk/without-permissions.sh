@@ -16,8 +16,3 @@ if [[ $? -ne 0 ]]; then
 fi
 
 exit 1
-if [[ $? -ne 0 ]]; then
-    exit 0
-fi
-
-exit 1
