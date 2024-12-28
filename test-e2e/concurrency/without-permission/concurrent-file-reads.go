@@ -83,7 +83,7 @@ func main() {
 		fmt.Println("Good times. Goodbye.")
 		os.Exit(0)
 	} else {
-		fmt.Printf("%d goroutines finished. We expected 13. Thus, returning exit code 1", failures)
+		fmt.Printf("Returning exit code 1")
 		os.Exit(1)
 	}
 }
