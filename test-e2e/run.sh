@@ -50,8 +50,7 @@ done
 go build -o ./gatekeeper $main_path/main.go
 declare -r bin_path=$(realpath ./gatekeeper)
 
-trap 'rm -rf .tmp || true' EXIT # always clean up before exit
-trap 'rm ./gatekeeper' EXIT # always clean up before exit
+trap 'rm -rf .tmp || true && rm ./gatekeeper' EXIT # always clean up before exit
 
 # Find all files ending with .sh in all subfolders and then iterate over them
 for file in $(find . -mindepth 2 -type f -name "*.sh"); do
