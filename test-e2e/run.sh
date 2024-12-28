@@ -37,8 +37,7 @@ done
 
 main_path=""
 current_dir=$(pwd)
-testExitCode=0
-testFailures=()
+test_failures=()
 
 while true; do
     if [[ -f "$current_dir/main.go" ]]; then
@@ -77,7 +76,7 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
         elif [ $exitCode -eq 124 ]; then
         echo -e "\e[33mtimeout\033[0m $file"
         echo -e "$output"
-        testFailures+=("timeout -> $file")
+        test_failures+=("timeout -> $file")
         
         if [[ $fail_fast -eq 1 ]]; then
             break
@@ -86,7 +85,7 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
         echo -e "\e[91mfailed\033[0m $file"
         echo -e ">> Expected exit code 0 and got $exitCode"
         echo -e "$output"
-        testFailures+=("failed -> $file")
+        test_failures+=("failed -> $file")
         
         if [[ $fail_fast -eq 1 ]]; then
             break
@@ -100,16 +99,16 @@ done
 
 echo "done"
 # Print all filenames that failed
-if [ ${#testFailures[@]} -gt 0 ]; then
+if [ ${#test_failures[@]} -gt 0 ]; then
     echo ""
-    echo -e "You have \e[91m${#testFailures[@]}\033[0m test failure(s):"
+    echo -e "You have \e[91m${#test_failures[@]}\033[0m test failure(s):"
     
-    for file in "${testFailures[@]}"; do
+    for file in "${test_failures[@]}"; do
         echo "$file"
     done
     
     echo ""
-    echo "You can rerun single test cases running this script with \"--only ${testFailures[0]}\""
+    echo "You can rerun single test cases running this script with \"--only ${test_failures[0]}\""
     echo ""
     echo "Exiting with 1"
     exit 1
