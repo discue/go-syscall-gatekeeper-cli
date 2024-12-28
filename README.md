@@ -19,18 +19,38 @@ Go application that can be used to watch and limit syscalls of other processes.
 
 ## 📦 Installation
 
-Install the package via npm:
+Install the package:
 
 ```bash
 go get https://github.com/discue/go-syscall-gatekeeper
 ```
 
-## 🚀 Usage
-*TODO*
+## 🔣 Usage
+```bash
+./gatekeeper [run|trace] [binary] [args...]
+```
+### 🚀 Run
+The `run` subcommand runs the given command without any syscall restrictions. This is as good as calling the target program directly.
 
+```bash
+./gatekeeper run ls -l
+```
+
+### 🤺 Permissions
+You can pass the following flags, to allow:
+- `--allow-file-system-read`: To allow the started process to read from the file system
+- `--allow-file-system-write`: To allow the started process to write to the file system
+- `--allow-network-client`: To allow the started process to open sockets and open connections to other servers
+- `--allow-network-server`: To allow the started process to listen on ports and accept incoming connections
+
+### 🔎 Trace
+The `trace` subcommand run the given binary and traces the syscalls. In this case, the `gatekeeper` will 
+
+```bash
+./gatekeeper trace ls -l
+```
 
 ## 🧪 Running Tests
-
 To run tests, run the following command
 
 ```bash
