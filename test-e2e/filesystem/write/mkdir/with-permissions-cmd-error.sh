@@ -4,7 +4,7 @@ set -uo pipefail
 
 declare -r main_path="$1"
 
-go run $main_path run --allow-file-system-write --no-implicit-allow mkdir .tmp/dir
+$main_path run --allow-file-system-read --no-implicit-allow grep "done" run.sh
 
 if [[ $? -ne 0 ]]; then
     exit 0

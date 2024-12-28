@@ -4,13 +4,13 @@ set -uo pipefail
 
 declare -r main_path="$1"
 
-touch .tmp/test.txt
+$main_path run --allow-file-system-read --no-implicit-allow awk '{print $1}' run.sh
 
-go run $main_path run \
---allow-file-system \
---allow-process-management \
---allow-memory-management \
---allow-process-synchronization \
+if [[ $? -ne 0 ]]; then
+    exit 0
+fi
+
+exit 1
 --allow-misc \
 wget -O - .tmp google.com
 

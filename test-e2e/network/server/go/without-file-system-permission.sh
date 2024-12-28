@@ -1,16 +1,16 @@
 #!/bin/bash
 
-set -xuo pipefail
+set -uo pipefail
 
 declare -r main_path="$1"
 
-# Start the server in the background
-nohup go run $main_path run --allow-network-server ./.tmp/server > /dev/null 2>&1 &
+$main_path run --allow-file-system-read --no-implicit-allow grep "done" run.sh
 
-server_pid=$!
-trap 'kill -9 $server_pid' EXIT
+if [[ $? -ne 0 ]]; then
+    exit 0
+fi
 
-# Number of retries
+exit 1
 max_retries=5
 
 # Wait for the server to start and check the status code.

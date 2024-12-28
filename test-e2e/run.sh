@@ -47,7 +47,11 @@ while true; do
     current_dir=$(dirname $current_dir)
 done
 
+go build -o ./gatekeeper $main_path/main.go
+declare -r bin_path=$(realpath ./gatekeeper)
+
 trap 'rm -rf .tmp || true' EXIT # always clean up before exit
+trap 'rm ./gatekeeper' EXIT # always clean up before exit
 
 # Find all files ending with .sh in all subfolders and then iterate over them
 for file in $(find . -mindepth 2 -type f -name "*.sh"); do
@@ -66,13 +70,14 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
     
     echo -ne "\e[36mpending\033[0m $file\033[K\r"
     
-    output=$("timeout" "20s" "$file" "$main_path" 2>&1)
+    output=$("timeout" "20s" "$file" "$bin_path" 2>&1)
     exitCode=$?
     
     echo -ne "\033[K\r" # reset previous log line to give the impression of overriding it
     
     if [ $exitCode -eq 0 ]; then
         echo -e "\e[32mok\033[0m $file "
+        
         elif [ $exitCode -eq 124 ]; then
         echo -e "\e[33mtimeout\033[0m $file"
         echo -e "$output"

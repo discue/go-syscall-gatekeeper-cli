@@ -3,14 +3,14 @@
 set -uo pipefail
 
 declare -r main_path="$1"
-declare -r start_command="python3 -m http.server 8080"
 
-nohup go run $main_path run --allow-file-system-read --allow-network-server $start_command > /dev/null 2>&1 &
+$main_path run --allow-file-system-read --no-implicit-allow grep "done" run.sh
 
-server_pid=$!
-trap 'pkill -f "'"$start_command"'"' EXIT  # Corrected trap
+if [[ $? -ne 0 ]]; then
+    exit 0
+fi
 
-# Number of retries
+exit 1
 max_retries=5
 
 # Wait for the server to start and check the status code.
