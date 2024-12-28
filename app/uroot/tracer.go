@@ -160,11 +160,12 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 				rax := rec.Syscall.Regs.Orig_rax
 				name, err := sec.ScmpSyscall(rec.Syscall.Sysno).GetName()
 				if err != nil {
+					// ending up here, we were not able to get the name of the syscall
+					// suspicious because the process might not have been stopped by a syscall
+					// but something else, so printing here for now while keeping the tracee
+					// up and running
 					fmt.Println(fmt.Sprintf("unknown 1syscall %s %d", err.Error(), rax))
-					injectSignal = syscall.SIGKILL
-					fmt.Println("force kill")
 				} else {
-
 					addSyscallToCollection(rax, name)
 					if runtime.Get().SyscallsKillTargetIfNotAllowed {
 
@@ -186,6 +187,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 								runtime.Get().FileSystemAllowRead &&
 								!runtime.Get().FileSystemAllowWrite {
 								// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
+
 								args := rec.Syscall.Args
 								mode := args[3].ModeT() // Assuming mode_t is represented as uint
 
@@ -213,6 +215,28 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 
 								if accessMode != "read" {
 									allow = false
+								}
+							} else if name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
+								if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient {
+									syscallArgs := rec.Syscall.Args
+									fd := syscallArgs[0].Int()
+
+									isSocket := args.IsSocket(p.pid, fd)
+									println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isSocket))
+									if !isSocket {
+										// we allow writing to sockets
+										allow = false
+									}
+								} else if runtime.Get().FileSystemAllowWrite {
+									syscallArgs := rec.Syscall.Args
+									fd := syscallArgs[0].Int()
+
+									isFile := args.IsFile(p.pid, fd)
+									println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isFile))
+									if isFile {
+										// we allow writing to sockets
+										allow = true
+									}
 								}
 							}
 						}
