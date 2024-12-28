@@ -5,16 +5,19 @@
 <div align="center">
 
 [![contributions - welcome](https://img.shields.io/badge/contributions-welcome-blue/green)](/CONTRIBUTING.md "Go to contributions doc")
-[![GitHub License](https://img.shields.io/github/license/discue/go-syscall-gatekeeper.svg)](https://github.com/discue/go-syscall-gatekeeper/blob/master/LICENSE)
+[![GitHub License](https://img.shields.io/github/license/discue/go-syscall-gatekeeper.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/blob/master/LICENSE)
 <br/>
 [![Go Report Card](https://goreportcard.com/badge/github.com/discue/go-syscall-gatekeeper)](https://goreportcard.com/report/github.com/discue/go-syscall-gatekeeper)
-[![Go](https://img.shields.io/badge/Go->=1.21-blue?logo=logo&logoColor=white)](https://nodejs.org "Go to Node.js homepage")
+[![Go](https://img.shields.io/github/go-mod/go-version/discue/go-syscall-gatekeeper-cli
+)](https://github.com/discue/go-syscall-gatekeeper-cli/blob/main/go.mod)
+<br/>
+[![lints](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/lints.yml/badge.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/lints.yml)
+[![tests](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/tests.yml)
 </div>
 
 <br/>
 
 # go-syscall-gatekeeper
-
 Go application that can be used to watch and limit syscalls of other processes.
 
 ## 📦 Installation
