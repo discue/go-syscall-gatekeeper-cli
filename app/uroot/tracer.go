@@ -167,82 +167,105 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 					fmt.Println(fmt.Sprintf("unknown 1syscall %s %d", err.Error(), rax))
 				} else {
 					addSyscallToCollection(rax, name)
-					if runtime.Get().SyscallsKillTargetIfNotAllowed {
 
-						allow := allowSyscall(name)
+					allow := allowSyscall(name)
 
-						if !allow {
-							if name == "write" {
+					if !allow {
+						if name == "write" {
+							syscallArgs := rec.Syscall.Args
+							fd := syscallArgs[0].Int()
+							isStdStream := args.IsStandardStream(fd)
+							println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
+							if isStdStream {
+								// we allow writing to standard streams
+								allow = true
+							}
+						}
+					} else {
+						if name == "openat" &&
+							runtime.Get().FileSystemAllowRead &&
+							!runtime.Get().FileSystemAllowWrite {
+							// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
+
+							args := rec.Syscall.Args
+							mode := args[3].ModeT() // Assuming mode_t is represented as uint
+
+							accessMode := ""
+							if mode&unix.O_RDONLY == unix.O_RDONLY {
+								accessMode = "read"
+							}
+							if mode&unix.O_WRONLY == unix.O_WRONLY {
+								accessMode = "write"
+							}
+							if mode&unix.O_RDWR == unix.O_RDWR {
+								accessMode = "write"
+							}
+							if mode&unix.O_RDWR == unix.O_APPEND {
+								accessMode = "write"
+							}
+							if mode&unix.O_RDWR == unix.O_CREAT {
+								accessMode = "write"
+							}
+							if mode&unix.O_RDWR == unix.O_TRUNC {
+								accessMode = "write"
+							}
+
+							println(fmt.Printf("access mode is %s\n", accessMode))
+
+							if accessMode != "read" {
+								allow = false
+							}
+						} else if name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
+							if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient {
 								syscallArgs := rec.Syscall.Args
 								fd := syscallArgs[0].Int()
-								isStdStream := args.IsStandardStream(fd)
-								println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
-								if isStdStream {
-									// we allow writing to standard streams
+
+								isSocket := args.IsSocket(p.pid, fd)
+								println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isSocket))
+								if !isSocket {
+									// we allow writing to sockets
+									allow = false
+								}
+							} else if runtime.Get().FileSystemAllowWrite {
+								syscallArgs := rec.Syscall.Args
+								fd := syscallArgs[0].Int()
+
+								isFile := args.IsFile(p.pid, fd)
+								println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isFile))
+								if isFile {
+									// we allow writing to sockets
 									allow = true
 								}
 							}
-						} else {
-							if name == "openat" &&
-								runtime.Get().FileSystemAllowRead &&
-								!runtime.Get().FileSystemAllowWrite {
-								// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
-
-								args := rec.Syscall.Args
-								mode := args[3].ModeT() // Assuming mode_t is represented as uint
-
-								accessMode := ""
-								if mode&unix.O_RDONLY == unix.O_RDONLY {
-									accessMode = "read"
-								}
-								if mode&unix.O_WRONLY == unix.O_WRONLY {
-									accessMode = "write"
-								}
-								if mode&unix.O_RDWR == unix.O_RDWR {
-									accessMode = "write"
-								}
-								if mode&unix.O_RDWR == unix.O_APPEND {
-									accessMode = "write"
-								}
-								if mode&unix.O_RDWR == unix.O_CREAT {
-									accessMode = "write"
-								}
-								if mode&unix.O_RDWR == unix.O_TRUNC {
-									accessMode = "write"
-								}
-
-								println(fmt.Printf("access mode is %s\n", accessMode))
-
-								if accessMode != "read" {
-									allow = false
-								}
-							} else if name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
-								if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient {
-									syscallArgs := rec.Syscall.Args
-									fd := syscallArgs[0].Int()
-
-									isSocket := args.IsSocket(p.pid, fd)
-									println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isSocket))
-									if !isSocket {
-										// we allow writing to sockets
-										allow = false
-									}
-								} else if runtime.Get().FileSystemAllowWrite {
-									syscallArgs := rec.Syscall.Args
-									fd := syscallArgs[0].Int()
-
-									isFile := args.IsFile(p.pid, fd)
-									println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isFile))
-									if isFile {
-										// we allow writing to sockets
-										allow = true
-									}
-								}
-							}
 						}
+					}
 
-						if !allow {
-							fmt.Println("Syscall not allowed:", name)
+					if !allow {
+						fmt.Println("Syscall not allowed:", name)
+						if runtime.Get().SyscallsDenyTargetIfNotAllowed {
+							fmt.Println("Syscall not allowed. However we don't have permission to kill")
+
+							if rec.Event == SyscallEnter {
+								// Set the return value registers to indicate an error (-1 and errno)
+								rec.Syscall.Regs.Rax = ^uint64(0) // Return -1 for error
+								// Choose an appropriate errno (e.g., EPERM for permission denied)
+								// rec.Syscall.Regs.Rax = uint64(unix.EPERM) // Set errno
+							} else if rec.Event == SyscallExit {
+								// Syscall Exit: The kernel sets register rax to the result of the syscall. This is typically 0 for success or -1 (represented as the maximum unsigned integer value) for an error.
+								rec.Syscall.Regs.Rax = ^uint64(0) // Set errno
+								// Syscall Exit: If Rax indicates an error (-1), Rdx will typically contain the specific error code (the errno) explaining the reason for the failure.
+								rec.Syscall.Regs.Rdx = uint64(unix.EPERM) // Set errno
+							}
+
+							// Set registers before continuing with the syscall exit.
+							if err := unix.PtraceSetRegs(p.pid, &rec.Syscall.Regs); err != nil {
+								return &TraceError{PID: p.pid, Err: fmt.Errorf("failed to set registers: %v", err)}
+							}
+
+							// Don't send SIGKILL; let the process continue with the simulated error return
+							injectSignal = 0
+
+						} else {
 							injectSignal = syscall.SIGKILL
 						}
 					}

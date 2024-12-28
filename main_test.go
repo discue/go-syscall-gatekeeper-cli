@@ -169,6 +169,24 @@ func TestLogSearchStringKillTarget(t *testing.T) {
 	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 
+func TestDenyTarget(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--on-syscall-denied", "error", "true"}
+
+	configureAndParseArgs()
+	a.False(runtime.Get().SyscallsKillTargetIfNotAllowed)
+	a.True(runtime.Get().SyscallsDenyTargetIfNotAllowed)
+}
+
+func TestKillTarget(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--on-syscall-denied", "kill", "true"}
+
+	configureAndParseArgs()
+	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
+	a.False(runtime.Get().SyscallsDenyTargetIfNotAllowed)
+}
+
 func TestVerboseLog(t *testing.T) {
 	a := assert.New(t)
 	os.Args = []string{"", "run", "--verbose", "true"}

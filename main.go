@@ -18,6 +18,29 @@ import (
 
 var logger = utils.NewLogger("main")
 
+type syscallDeniedAction string
+
+const (
+	KillAction  syscallDeniedAction = "kill"
+	ErrorAction syscallDeniedAction = "error"
+)
+
+func (s *syscallDeniedAction) String() string {
+	return string(*s)
+}
+
+func (s *syscallDeniedAction) Set(value string) error {
+	switch value {
+	case "kill":
+		*s = KillAction
+	case "error":
+		*s = ErrorAction
+	default:
+		return fmt.Errorf("invalid value for on-syscall-denied: %s.  Must be 'kill' or 'error'", value)
+	}
+	return nil
+}
+
 func main() {
 	mainCtx, cancel := context.WithCancel(context.Background())
 
@@ -62,6 +85,8 @@ func configureAndParseArgs() []string {
 	allowProcessSynchronization := runCmd.Bool("allow-process-synchronization", false, "a bool")
 	allowMisc := runCmd.Bool("allow-misc", false, "a bool")
 	noImplicitAllow := runCmd.Bool("no-implicit-allow", false, "a bool")
+	var action syscallDeniedAction // Custom flag variable
+	runCmd.Var(&action, "on-syscall-denied", "Action to take when a syscall is denied: 'kill' or 'error'")
 
 	// parse flags now
 	runCmd.Parse(os.Args[2:])
@@ -153,7 +178,14 @@ func configureAndParseArgs() []string {
 	if len(allowList.Syscalls) > 0 {
 		conf.SyscallsAllowList = allowList.Syscalls
 		conf.SyscallsAllowMap = runtime.CreateSyscallAllowMap(conf.SyscallsAllowList)
+	}
+
+	if action == ErrorAction {
+		conf.SyscallsKillTargetIfNotAllowed = false
+		conf.SyscallsDenyTargetIfNotAllowed = true
+	} else {
 		conf.SyscallsKillTargetIfNotAllowed = true
+		conf.SyscallsDenyTargetIfNotAllowed = false
 	}
 
 	if mode == "trace" {

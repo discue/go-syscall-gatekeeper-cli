@@ -18,6 +18,7 @@ type SyscallConfig struct {
 	SyscallsAllowList              []string `split_words:"true"`
 	SyscallsAllowMap               map[string]bool
 	SyscallsKillTargetIfNotAllowed bool `split_words:"true" default:"true"`
+	SyscallsDenyTargetIfNotAllowed bool `split_words:"true" default:"false"`
 }
 
 type FsConfig struct {
