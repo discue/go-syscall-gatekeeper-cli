@@ -19,7 +19,6 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -134,15 +133,15 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 
 	exitContext, cancel := context.WithCancelCause(ctx)
 	go func() {
-		_ = Strace(cmd, cancel, os.Stdout)
+		Strace(cmd, cancel, os.Stdout)
 	}()
 
 	return cmd, exitContext, nil
 }
 
 // Strace traces and prints process events for `c` and its children to `out`.
-func Strace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, out io.Writer) error {
-	return Trace(c, cancelFunc, PrintTraces(out))
+func Strace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, out io.Writer) {
+	Trace(c, cancelFunc, PrintTraces(out))
 }
 
 // Trace traces `c` and any children c clones.
@@ -151,14 +150,7 @@ func Strace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, out io.Writer) erro
 //
 // recordCallback is called every time a process event happens with the process
 // in a stopped state.
-func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...EventCallback) error {
-	if !atomic.CompareAndSwapUint32(&traceActive, 0, 1) {
-		return fmt.Errorf("a process trace is already active in this process")
-	}
-	defer func() {
-		atomic.StoreUint32(&traceActive, 0)
-	}()
-
+func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...EventCallback) {
 	if c.SysProcAttr == nil {
 		c.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -174,7 +166,6 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 		cancelFunc(&ExitEventError{
 			ExitCode: 2,
 		})
-		return err
 	}
 
 	tracer := &tracer{
@@ -207,9 +198,17 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 	// change would take a while to get into Go, and we want this API to be
 	// easily usable. I think it's ok to sacrifice the execve for now.
 	if _, ws, err := wait(c.Process.Pid); err != nil {
-		return err
+		fmt.Printf("Received error while waiting for pid %d to stop for ptrace injection: %s\n", c.Process.Pid, err.Error())
+		cancelFunc(&ExitEventError{
+			ExitCode: 2,
+		})
+		return
 	} else if ws.TrapCause() != 0 {
-		return fmt.Errorf("wait(pid=%d): got %v, want stopped process", c.Process.Pid, ws)
+		fmt.Printf("Expected pid %d to be stopped but got %#+v\n", c.Process.Pid, ws)
+		cancelFunc(&ExitEventError{
+			ExitCode: 2,
+		})
+		return
 	}
 	tracer.addProcess(c.Process.Pid, SyscallExit)
 
@@ -222,19 +221,22 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 			unix.PTRACE_O_EXITKILL|
 			// Automatically trace fork(2)'d, clone(2)'d, and vfork(2)'d children.
 			unix.PTRACE_O_TRACECLONE|unix.PTRACE_O_TRACEFORK|unix.PTRACE_O_TRACEVFORK); err != nil {
-		return &TraceError{
-			PID: c.Process.Pid,
-			Err: os.NewSyscallError("ptrace(PTRACE_SETOPTIONS)", err),
-		}
+
+		fmt.Printf("Unable to set ptrace options %s\n", err.Error())
+		cancelFunc(&ExitEventError{
+			ExitCode: 2,
+		})
+		return
 	}
 
 	// Start the process back up.
 	if err := unix.PtraceSyscall(c.Process.Pid, 0); err != nil {
-		return &TraceError{
-			PID: c.Process.Pid,
-			Err: fmt.Errorf("failed to resume: %w", err),
-		}
+		fmt.Printf("Unable to resume process %d: %s\n", c.Process.Pid, err.Error())
+		cancelFunc(&ExitEventError{
+			ExitCode: 2,
+		})
+		return
 	}
 
-	return tracer.runLoop(cancelFunc)
+	tracer.runLoop(cancelFunc)
 }
