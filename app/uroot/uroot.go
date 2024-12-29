@@ -43,7 +43,7 @@ type NewChildEvent struct {
 
 // EventCallback is a function called on each event while the subject process
 // is stopped.
-type EventCallback func(t Task, record *TraceRecord) error
+type EventCallback func(t Task, record *TraceRecord)
 
 // Task is a Linux process.
 type Task interface {

@@ -3,7 +3,6 @@ package uroot
 import (
 	"context"
 	"fmt"
-	"os"
 	"syscall"
 	"time"
 
@@ -72,13 +71,10 @@ type SignalEvent struct {
 	// TODO: Add other siginfo_t stuff
 }
 
-func (t *tracer) call(p *process, rec *TraceRecord) error {
+func (t *tracer) call(p *process, rec *TraceRecord) {
 	for _, c := range t.callback {
-		if err := c(p, rec); err != nil {
-			return err
-		}
+		c(p, rec)
 	}
-	return nil
 }
 
 func (t *tracer) addProcess(pid int, event EventType) {
@@ -91,8 +87,9 @@ func (t *tracer) addProcess(pid int, event EventType) {
 	}
 }
 
-func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
-	for {
+func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
+	loop := true
+	for loop == true {
 		// TODO: we cannot have any other children. I'm not sure this
 		// is actually solvable: if we used a session or process group,
 		// a tracee process's usage of them would mess up our accounting.
@@ -115,10 +112,15 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 		// The latter option seems much nicer.
 		pid, status, err := wait(-1)
 		if err == unix.ECHILD {
-			// All our children are gone.
-			return nil
+			fmt.Printf("All watched processes died: %s. This is not related to the gatekeeper.\n", err.Error())
+			cancelFunc(&ExitEventError{
+				ExitCode: 3,
+			})
 		} else if err != nil {
-			return os.NewSyscallError("wait4", err)
+			fmt.Printf("Unable to wait for processed to stop and intercept syscall: %s. Exiting\n", err.Error())
+			cancelFunc(&ExitEventError{
+				ExitCode: 3,
+			})
 		}
 
 		// Which process was stopped?
@@ -155,7 +157,10 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			// SIGTRAPs (e.g. sent by tkill(2)).
 			case syscall.SIGTRAP | 0x80:
 				if err := rec.syscallStop(p); err != nil {
-					return err
+					fmt.Printf("Unable to read syscall params and args of pid %d: %s. Exiting\n", p.pid, err.Error())
+					cancelFunc(&ExitEventError{
+						ExitCode: 3,
+					})
 				}
 
 				rax := rec.Syscall.Regs.Orig_rax
@@ -261,7 +266,10 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 
 							// Set registers before continuing with the syscall exit.
 							if err := unix.PtraceSetRegs(p.pid, &rec.Syscall.Regs); err != nil {
-								return &TraceError{PID: p.pid, Err: fmt.Errorf("failed to set registers: %v", err)}
+								fmt.Printf("Unable to set syscall params and args: %s. Exiting\n", err.Error())
+								cancelFunc(&ExitEventError{
+									ExitCode: 3,
+								})
 							}
 
 							// Don't send SIGKILL; let the process continue with the simulated error return
@@ -304,10 +312,10 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 				case unix.PTRACE_EVENT_CLONE, unix.PTRACE_EVENT_FORK, unix.PTRACE_EVENT_VFORK:
 					childPID, err := unix.PtraceGetEventMsg(pid)
 					if err != nil {
-						return &TraceError{
-							PID: pid,
-							Err: os.NewSyscallError("ptrace(PTRACE_GETEVENTMSG)", err),
-						}
+						fmt.Printf("Unable to get event message: %s. Exiting\n", err.Error())
+						cancelFunc(&ExitEventError{
+							ExitCode: 3,
+						})
 					}
 					// The first event will be an Enter syscall, so
 					// set the last event to an exit.
@@ -339,13 +347,12 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 			rec.Event = Unknown
 		}
 
-		if err := t.call(p, rec); err != nil {
-			return err
-		}
+		t.call(p, rec)
 
 		if rec.Event == Exit {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
+				loop = false
 				cancelFunc(&ExitEventError{
 					ExitCode: rec.Exit.WaitStatus.ExitStatus(),
 				})
@@ -356,6 +363,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 		if rec.Event == SignalExit {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
+				loop = false
 				cancelFunc(&ExitEventError{
 					Signal: signalString(rec.SignalExit.Signal),
 				})
@@ -364,7 +372,10 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) error {
 		}
 
 		if err := p.cont(injectSignal); err != nil {
-			return err
+			fmt.Printf("Unable to continue process with pid %d: %s. Exiting\n", p.pid, err.Error())
+			cancelFunc(&ExitEventError{
+				ExitCode: 3,
+			})
 		}
 	}
 }
