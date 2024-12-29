@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
 	"syscall"
@@ -91,7 +92,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 		stdout.PipeStdOut(ctx, stdoutPipe)
 		// if we should enable the gatekeeper via log search string
 		// create another goroutine that keeps monitoring stdout
-	} else {
+	} else if runtimeConfig.Get().TriggerEnforceLogMatch != "" {
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
@@ -123,6 +124,21 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 
 			stdout.PipeStdOut(ctx, stdoutPipe)
 		}()
+	} else if runtimeConfig.Get().TriggerEnforceSignal != "" {
+		go func() {
+			signalChan := make(chan os.Signal, 1)
+			signal.Notify(signalChan, unix.SignalNum(runtimeConfig.Get().TriggerEnforceSignal))
+
+			select {
+			case <-signalChan:
+				println("Enabling gatekeeper now because signal was detected.")
+				enforceGatekeeper()
+			}
+
+			stdout.PipeStdOut(ctx, stdoutPipe)
+		}()
+	} else {
+		stdout.PipeStdOut(ctx, stdoutPipe)
 	}
 
 	// setup goroutines to read and print errout

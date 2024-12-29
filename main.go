@@ -63,7 +63,6 @@ func startTracee(c context.Context) context.Context {
 
 func configureAndParseArgs() []string {
 	conf := runtime.Get()
-	mode := os.Args[1]
 
 	runCmd := flag.NewFlagSet("mode", flag.ExitOnError)
 	triggerEnforceOnLogMatch := runCmd.String("trigger-enforce-on-log-match", "", "a string")
@@ -90,6 +89,14 @@ func configureAndParseArgs() []string {
 	noImplicitAllow := runCmd.Bool("no-implicit-allow", false, "a bool")
 	var action syscallDeniedAction // Custom flag variable
 	runCmd.Var(&action, "on-syscall-denied", "Action to take when a syscall is denied: 'kill' or 'error'")
+
+	if len(os.Args) < 3 {
+		fmt.Println("Error: You did not provide enough parameters and flags.")
+		runCmd.Usage()
+		exit(100)
+	}
+
+	mode := os.Args[1]
 
 	// parse flags now
 	err := runCmd.Parse(os.Args[2:])
