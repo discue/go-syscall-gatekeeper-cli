@@ -3,6 +3,7 @@ package uroot
 import (
 	"context"
 	"fmt"
+	"strings"
 	"syscall"
 	"time"
 
@@ -88,8 +89,7 @@ func (t *tracer) addProcess(pid int, event EventType) {
 }
 
 func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
-	loop := true
-	for loop == true {
+	for {
 		// TODO: we cannot have any other children. I'm not sure this
 		// is actually solvable: if we used a session or process group,
 		// a tracee process's usage of them would mess up our accounting.
@@ -157,10 +157,15 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 			// SIGTRAPs (e.g. sent by tkill(2)).
 			case syscall.SIGTRAP | 0x80:
 				if err := rec.syscallStop(p); err != nil {
-					fmt.Printf("Unable to read syscall params and args of pid %d: %s. Exiting\n", p.pid, err.Error())
-					cancelFunc(&ExitEventError{
-						ExitCode: 3,
-					})
+					if strings.Contains(err.Error(), "no such process") {
+						// race condition during shutdown of the tracee. do nothing now but exit
+						continue
+					} else {
+						fmt.Printf("Unable to read syscall params and args of pid %d: %s. Exiting\n", p.pid, err.Error())
+						cancelFunc(&ExitEventError{
+							ExitCode: 3,
+						})
+					}
 				}
 
 				rax := rec.Syscall.Regs.Orig_rax
@@ -352,30 +357,34 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 		if rec.Event == Exit {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
-				loop = false
 				cancelFunc(&ExitEventError{
 					ExitCode: rec.Exit.WaitStatus.ExitStatus(),
 				})
+				return
 			}
-			continue
 		}
 
 		if rec.Event == SignalExit {
 			delete(t.processes, pid)
 			if len(t.processes) < 1 {
-				loop = false
 				cancelFunc(&ExitEventError{
 					Signal: signalString(rec.SignalExit.Signal),
 				})
+				return
 			}
-			continue
 		}
 
 		if err := p.cont(injectSignal); err != nil {
-			fmt.Printf("Unable to continue process with pid %d: %s. Exiting\n", p.pid, err.Error())
-			cancelFunc(&ExitEventError{
-				ExitCode: 3,
-			})
+			if strings.Contains(err.Error(), "no such process") {
+				println(fmt.Sprintf("Error trying to continue pid %d: %s", p.pid, err.Error()))
+				// race condition during shutdown of the tracee. do nothing, when calling wait again we will receive the
+				// actual exit status
+			} else {
+				fmt.Printf("Unable to continue process with pid %d: %s. Exiting\n", p.pid, err.Error())
+				cancelFunc(&ExitEventError{
+					ExitCode: 3,
+				})
+			}
 		}
 	}
 }
