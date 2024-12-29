@@ -160,6 +160,14 @@ func TestLogSearchString(t *testing.T) {
 	a.False(runtime.Get().EnforceOnStartup)
 }
 
+func TestEnforceOnStartup(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "true"}
+
+	configureAndParseArgs()
+	a.True(runtime.Get().EnforceOnStartup)
+}
+
 func TestLogSearchStringKillTarget(t *testing.T) {
 	a := assert.New(t)
 	os.Args = []string{"", "run", "--log-search-string", "test", "true"}

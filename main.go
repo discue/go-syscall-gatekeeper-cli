@@ -173,6 +173,8 @@ func configureAndParseArgs() []string {
 	if *runLogSearchString != "" {
 		conf.LogSearchString = *runLogSearchString
 		conf.EnforceOnStartup = false
+	} else {
+		conf.EnforceOnStartup = true
 	}
 
 	if len(allowList.Syscalls) > 0 {
