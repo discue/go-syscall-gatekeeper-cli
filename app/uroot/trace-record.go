@@ -1,7 +1,6 @@
 package uroot
 
 import (
-	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -27,10 +26,7 @@ func (t *TraceRecord) syscallStop(p *process) error {
 	t.Syscall = &SyscallEvent{}
 
 	if err := unix.PtraceGetRegs(p.pid, &t.Syscall.Regs); err != nil {
-		return &TraceError{
-			PID: p.pid,
-			Err: os.NewSyscallError("ptrace(PTRACE_GETREGS)", err),
-		}
+		return err
 	}
 
 	// name, _ := sec.ScmpSyscall(t.Syscall.Regs.Orig_rax).GetName()
