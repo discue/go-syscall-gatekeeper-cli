@@ -57,6 +57,7 @@ type Task interface {
 
 func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Context, error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Env = getEnv(os.Getpid())
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Cancel = func() error {
 		return syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
@@ -239,4 +240,11 @@ func Trace(c *exec.Cmd, cancelFunc context.CancelCauseFunc, recordCallback ...Ev
 	}
 
 	tracer.runLoop(cancelFunc)
+}
+
+func getEnv(pid int) []string {
+	envVar := fmt.Sprintf("GATEKEEPER_PID=%d", pid)
+	env := os.Environ()
+	env = append(env, envVar)
+	return env
 }
