@@ -96,6 +96,7 @@ func configureAndParseArgs() []string {
 	if err != nil {
 		fmt.Println(err.Error())
 		runCmd.Usage()
+		exit(100)
 	}
 
 	allowList := runtime.NewSyscallAllowList()
@@ -214,7 +215,7 @@ func configureAndParseArgs() []string {
 		conf.ExecutionMode = runtime.EXECUTION_MODE_RUN
 	} else {
 		runCmd.Usage()
-		os.Exit(1)
+		exit(100)
 	}
 
 	return runCmd.Args()
@@ -250,5 +251,5 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 
 	println(fmt.Sprintf("Exiting with code %d", exitCode))
 	// exit
-	os.Exit(exitCode)
+	exit(exitCode)
 }
