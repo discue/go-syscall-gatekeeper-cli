@@ -32,10 +32,11 @@ type NetworkConfig struct {
 }
 
 type GatekeeperConfig struct {
-	EnforceOnStartup bool           `split_words:"true" default:"true"`
-	ExecutionMode    EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
-	LogSearchString  string         `split_words:"true" default:"true"`
-	VerboseLog       bool           `split_words:"true" default:"false"`
+	EnforceOnStartup       bool           `split_words:"true" default:"true"`
+	ExecutionMode          EXECUTION_MODE `env:"EXECUTION_MODE,enum=TRACE,RUN"`
+	TriggerEnforceLogMatch string         `split_words:"true" default:"true"`
+	TriggerEnforceSignal   string         `split_words:"true" default:"false"`
+	VerboseLog             bool           `split_words:"true" default:"false"`
 }
 
 type Config struct {

@@ -151,13 +151,43 @@ func TestAllowMisc(t *testing.T) {
 	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 
-func TestLogSearchString(t *testing.T) {
+func TestEnorceAfterLogMatch(t *testing.T) {
 	a := assert.New(t)
-	os.Args = []string{"", "run", "--log-search-string", "test", "true"}
+	os.Args = []string{"", "run", "--no-enforce-on-startup", "--trigger-enforce-on-log-match", "test", "true"}
 
 	configureAndParseArgs()
-	a.Equal("test", runtime.Get().LogSearchString)
 	a.False(runtime.Get().EnforceOnStartup)
+	a.Equal("test", runtime.Get().TriggerEnforceLogMatch)
+}
+
+func TestEnforceAfterSignal(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--no-enforce-on-startup", "--trigger-enforce-on-signal", "SIGUSR1", "true"}
+
+	configureAndParseArgs()
+	a.False(runtime.Get().EnforceOnStartup)
+	a.Equal(runtime.Get().TriggerEnforceSignal, "SIGUSR1")
+}
+
+func TestErrorIfNoLogMatchOrSignal(t *testing.T) {
+	a := assert.New(t)
+	os.Args = []string{"", "run", "--no-enforce-on-startup"}
+
+	var gotExitCode int
+	oldOsExit := osExit
+	osExit = func(code int) {
+		gotExitCode = code
+		panic("os.Exit called") // or use a different mechanism to stop execution
+	}
+	defer func() {
+		osExit = oldOsExit // Restore original os.Exit
+		if r := recover(); r != nil {
+			a.Equal(100, gotExitCode)
+		}
+	}()
+
+	configureAndParseArgs()
+	t.Errorf("Expected configureAndParseArgs to call os.Exit") // This should not be reached
 }
 
 func TestEnforceOnStartup(t *testing.T) {
@@ -168,12 +198,12 @@ func TestEnforceOnStartup(t *testing.T) {
 	a.True(runtime.Get().EnforceOnStartup)
 }
 
-func TestLogSearchStringKillTarget(t *testing.T) {
+func TestTriggerEnforceLogMatchKillTarget(t *testing.T) {
 	a := assert.New(t)
-	os.Args = []string{"", "run", "--log-search-string", "test", "true"}
+	os.Args = []string{"", "run", "--no-enforce-on-startup", "--trigger-enforce-on-log-match", "test", "true"}
 
 	configureAndParseArgs()
-	a.Equal("test", runtime.Get().LogSearchString)
+	a.Equal("test", runtime.Get().TriggerEnforceLogMatch)
 	a.True(runtime.Get().SyscallsKillTargetIfNotAllowed)
 }
 

@@ -15,6 +15,11 @@ import (
 	"github.com/discue/go-syscall-gatekeeper/app/uroot"
 )
 
+var osExit = os.Exit // Assign exit to a variable to allow mocking in unit tests
+func exit(code int) {
+	osExit(code)
+}
+
 type syscallDeniedAction string
 
 const (
@@ -61,7 +66,8 @@ func configureAndParseArgs() []string {
 	mode := os.Args[1]
 
 	runCmd := flag.NewFlagSet("mode", flag.ExitOnError)
-	runLogSearchString := runCmd.String("log-search-string", "", "a string")
+	triggerEnforceOnLogMatch := runCmd.String("trigger-enforce-on-log-match", "", "a string")
+	triggerEnforceOnSignal := runCmd.String("trigger-enforce-on-signal", "", "a string")
 	verbose := runCmd.Bool("verbose", false, "a bool")
 
 	// permissions
@@ -80,6 +86,7 @@ func configureAndParseArgs() []string {
 	allowProcessCommunication := runCmd.Bool("allow-process-communication", false, "a bool")
 	allowProcessSynchronization := runCmd.Bool("allow-process-synchronization", false, "a bool")
 	allowMisc := runCmd.Bool("allow-misc", false, "a bool")
+	noEnforceOnStart := runCmd.Bool("no-enforce-on-startup", false, "a bool")
 	noImplicitAllow := runCmd.Bool("no-implicit-allow", false, "a bool")
 	var action syscallDeniedAction // Custom flag variable
 	runCmd.Var(&action, "on-syscall-denied", "Action to take when a syscall is denied: 'kill' or 'error'")
@@ -170,11 +177,22 @@ func configureAndParseArgs() []string {
 
 	conf.VerboseLog = *verbose
 
-	if *runLogSearchString != "" {
-		conf.LogSearchString = *runLogSearchString
-		conf.EnforceOnStartup = false
+	if *noEnforceOnStart {
+		if *triggerEnforceOnLogMatch == "" && *triggerEnforceOnSignal == "" {
+			fmt.Println("Error: To delay the enforcement of seccomp policies, please also specify either --trigger-enforce-on-log-match or --trigger-enforce-on-signal.")
+			runCmd.Usage()
+			exit(100)
+		} else {
+			conf.EnforceOnStartup = false
+		}
 	} else {
 		conf.EnforceOnStartup = true
+	}
+
+	if *triggerEnforceOnLogMatch != "" {
+		conf.TriggerEnforceLogMatch = *triggerEnforceOnLogMatch
+	} else if *triggerEnforceOnSignal != "" {
+		conf.TriggerEnforceSignal = *triggerEnforceOnSignal
 	}
 
 	if len(allowList.Syscalls) > 0 {
