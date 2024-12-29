@@ -9,7 +9,7 @@ import (
 func main() {
 	var wg sync.WaitGroup
 	numGoroutines := 2000 // Number of goroutines to launch
-	numSuccessfulGoroutines := 25
+	numSuccessfulGoroutines := 100
 
 	expectedFailures := make(chan int, numGoroutines) // Channel to receive goroutine IDs on success
 	for i := 0; i < numGoroutines; i++ {
