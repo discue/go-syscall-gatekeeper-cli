@@ -9,6 +9,7 @@ nohup $main_path run --allow-file-system-read --allow-network-server --no-implic
 
 # Get the process ID (PID) of the server process.  Use $! immediately
 server_pid=$!
+
 trap 'kill -9 $server_pid' EXIT
 
 # Number of retries
@@ -16,7 +17,7 @@ max_retries=5
 
 # Wait for the server to start and check the status code.
 for i in $(seq 1 $max_retries); do
-    status_code=$(curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8081)
+    status_code=$(curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8082)
     
     if [[ "$status_code" == "200" ]]; then # Changed from "40" to "404"
         echo "Server returned 200 as expected."

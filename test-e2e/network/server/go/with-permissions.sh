@@ -16,7 +16,7 @@ max_retries=5
 
 # Wait for the server to start and check the status code.
 for i in $(seq 1 $max_retries); do
-    status_code=$(curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8081)
+    status_code=$(curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8082)
     
     if [[ "$status_code" == "404" ]]; then # Changed from "40" to "404"
         echo "Server returned 404 as expected."

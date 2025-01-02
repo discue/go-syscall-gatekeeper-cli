@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	server := &http.Server{Addr: ":8081", Handler: nil} // Create server instance
+	server := &http.Server{Addr: ":8082", Handler: nil} // Create server instance
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
