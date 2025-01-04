@@ -72,9 +72,10 @@ func configureAndParseArgs() []string {
 	// permissions
 	allowFileSystemReadAccess := runCmd.Bool("allow-file-system-read", false, "a bool")
 	allowFileSystemWriteAccess := runCmd.Bool("allow-file-system-write", false, "a bool")
+	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "alias for --allow-file-system-write")
+
 	allowNetworkClient := runCmd.Bool("allow-network-client", false, "a bool")
 	allowNetworkServer := runCmd.Bool("allow-network-server", false, "a bool")
-	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "a bool")
 	allowProcessManagement := runCmd.Bool("allow-process-management", false, "a bool")
 	allowNetworking := runCmd.Bool("allow-networking", false, "a bool")
 	allowMemoryManagement := runCmd.Bool("allow-memory-management", false, "a bool")
@@ -108,7 +109,7 @@ func configureAndParseArgs() []string {
 
 	allowList := runtime.NewSyscallAllowList()
 
-	if *allowFileSystemWriteAccess {
+	if *allowFileSystemWriteAccess || *allowFileSystemAccess {
 		allowList.AllowAllFileSystemWriteAccess()
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
@@ -119,8 +120,6 @@ func configureAndParseArgs() []string {
 		allowList.AllowAllFileDescriptors()
 		runtime.Get().FsConfig.FileSystemAllowRead = true
 		runtime.Get().FsConfig.FileSystemAllowWrite = false
-	} else if *allowFileSystemAccess {
-		allowList.AllowAllFileSystemAccess()
 	}
 
 	if *allowProcessManagement {
