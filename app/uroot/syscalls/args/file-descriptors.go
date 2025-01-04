@@ -8,6 +8,20 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+	FDUnknown       = "unknown"
+	FDFile          = "file"
+	FDDir           = "directory"
+	FDSymlink       = "symlink"
+	FDCharDevice    = "char device"
+	FDBlockDevice   = "block device"
+	FDSocket        = "socket"
+	FDPipe          = "pipe"
+	FDAnonEvent     = "anon eventfd"
+	FDAnonEventPoll = "anon eventpoll"
+	FDAnonIoUring   = "anon io_uring"
+)
+
 var (
 	// store fds for standard streams for faster access
 	stdIn  = os.Stdin.Fd()
@@ -76,22 +90,47 @@ func IsPipe(pid int, fd int32) bool {
 }
 
 func FdType(pid int, fd int32) string {
-	if IsFile(pid, fd) {
-		return "file"
-	} else if IsSymlink(pid, fd) {
-		return "symlink"
-	} else if IsBlockDevice(pid, fd) {
-		return "block device"
-	} else if IsCharDevice(pid, fd) {
-		return "char device"
-	} else if IsSocket(pid, fd) {
-		return "socket"
-	} else if IsPipe(pid, fd) {
-		return "pipe"
-	} else if IsStandardStream(fd) {
-		return "standard stream"
-	} else if IsDir(pid, fd) {
-		return "dir"
+	stat, err := LstatFd(pid, fd)
+	if err != nil {
+		fmt.Printf("error stating fd %d: %v\n", fd, err)
+		return FDUnknown
 	}
-	return "unknown"
+
+	// Check file type using stat.Mode
+	switch stat.Mode & syscall.S_IFMT {
+	case syscall.S_IFREG:
+		return FDFile
+	case syscall.S_IFDIR:
+		return FDDir
+	case syscall.S_IFLNK:
+		return FDSymlink
+	case syscall.S_IFCHR:
+		return FDCharDevice
+	case syscall.S_IFBLK:
+		return FDBlockDevice
+	case syscall.S_IFSOCK:
+		return FDSocket
+	case syscall.S_IFIFO:
+		return FDPipe
+	}
+
+	// Fallback: Use readlink to determine the type
+	filePath := fmt.Sprintf("/proc/%d/fd/%d", pid, fd)
+	link, err := os.Readlink(filePath)
+	if err != nil {
+		fmt.Printf("error reading link for fd %d: %v\n", fd, err)
+		return FDUnknown
+	}
+
+	// Check for specific anon_inode types
+	switch link {
+	case "anon_inode:[eventfd]":
+		return FDAnonEvent
+	case "anon_inode:[eventpoll]":
+		return FDAnonEventPoll
+	case "anon_inode:[io_uring]":
+		return FDAnonIoUring
+	}
+
+	return fmt.Sprintf("unknown (%s)", link)
 }
