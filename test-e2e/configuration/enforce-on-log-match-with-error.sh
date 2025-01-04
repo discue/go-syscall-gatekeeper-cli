@@ -9,7 +9,7 @@ $main_path run \
 --allow-file-system-read \
 --no-enforce-on-startup \
 --trigger-enforce-on-log-match="enforce gatekeeping" \
---on-syscall-denied=kill \
+--on-syscall-denied=error \
 bash -c $script_path/log-match.bash
 
 if [[ $? -ne 4 && $? -ne 159 ]]; then

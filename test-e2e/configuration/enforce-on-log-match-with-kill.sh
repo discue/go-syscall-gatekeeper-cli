@@ -9,13 +9,14 @@ $main_path run \
 --allow-file-system-read \
 --no-enforce-on-startup \
 --trigger-enforce-on-log-match="enforce gatekeeping" \
---on-syscall-denied=error \
+--on-syscall-denied=kill \
 bash -c $script_path/log-match.bash
 
-# This is the list of exit codes for wget:
-# 4       Network failure
+# https://specificlanguages.com/posts/2022-07/14-exit-code-137/
+# Exit code 137 is Linux-specific and means that your process was killed by a signal, namely SIGKILL.
+# The main reason for a process getting killed by SIGKILL on Linux (unless you do it yourself) is running out of memory.1
 
-if [[ $? -ne 4   ]] || [[ $? -eq 159 ]]; then
+if [[ $? -ne 137 ]]; then
     exit 1
 fi
 
