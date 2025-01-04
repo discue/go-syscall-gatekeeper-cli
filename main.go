@@ -128,11 +128,13 @@ func configureAndParseArgs() []string {
 
 	if *allowNetworkClient {
 		allowList.AllowNetworkClient()
+		allowList.AllowAllFileDescriptors()
 		conf.NetworkAllowClient = true
 	}
 
 	if *allowNetworkServer {
 		allowList.AllowNetworkServer()
+		allowList.AllowAllFileDescriptors()
 		conf.NetworkAllowServer = true
 	}
 
