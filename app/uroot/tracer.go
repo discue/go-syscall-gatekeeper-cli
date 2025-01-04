@@ -377,8 +377,8 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 		if err := p.cont(injectSignal); err != nil {
 			if strings.Contains(err.Error(), "no such process") {
 				println(fmt.Sprintf("Error trying to continue pid %d: %s", p.pid, err.Error()))
-				// race condition during shutdown of the tracee. do nothing, when calling wait again we will receive the
-				// actual exit status
+				// race condition during shutdown of the tracee. do nothing. When calling wait again
+				// at the beginning of this loop we will receive the actual exit status
 			} else {
 				fmt.Printf("Unable to continue process with pid %d: %s. Exiting\n", p.pid, err.Error())
 				cancelFunc(&ExitEventError{
