@@ -156,6 +156,10 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 			// It allows us to distinguish syscall-stops from regular
 			// SIGTRAPs (e.g. sent by tkill(2)).
 			case syscall.SIGTRAP | 0x80:
+				if !GetIsGatekeeperEnforced() {
+					break
+				}
+
 				if err := rec.syscallStop(p); err != nil {
 					if strings.Contains(err.Error(), "no such process") {
 						// race condition during shutdown of the tracee. do nothing now but exit
