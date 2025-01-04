@@ -15,7 +15,7 @@ bash -c $script_path/log-match.bash
 # This is the list of exit codes for wget:
 # 4       Network failure
 
-if [[ $? -ne 4 ]]; then
+if [[ $? -ne 4   ]] || [[ $? -eq 159 ]]; then
     exit 1
 fi
 
