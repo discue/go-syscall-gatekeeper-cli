@@ -1,35 +1,38 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"net"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 	server := &http.Server{Addr: ":8082", Handler: nil} // Create server instance
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+	defer server.Close()
+
+	ln, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		fmt.Println("Error listening:", err)
+		os.Exit(1)
+	}
 
 	// Run server in a separate goroutine
 	go func() {
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := server.Serve(ln); err != http.ErrServerClosed {
 			fmt.Println("Server error:", err) // Handle unexpected server errors
+			os.Exit(1)
 		}
 	}()
 
-	time.Sleep(5 * time.Second)
-	_ = server.Shutdown(ctx)
+	fmt.Println("Starting server")
 
-	// sigChan := make(chan os.Signal, 1)
-	// signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// <-sigChan // Wait for a signal
-	<-ctx.Done() // Wait for the context to be canceled
-
-	fmt.Println("Shutting down server...")
+	<-sigChan
 
 	fmt.Println("Server stopped")
-
 }
