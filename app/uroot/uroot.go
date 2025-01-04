@@ -29,8 +29,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var traceActive uint32
-
 // ExitEvent is emitted when the process exits regularly using exit_group(2).
 type ExitEvent struct {
 	// WaitStatus is the exit status.
@@ -129,11 +127,9 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 			signalChan := make(chan os.Signal, 1)
 			signal.Notify(signalChan, unix.SignalNum(runtimeConfig.Get().TriggerEnforceSignal))
 
-			select {
-			case <-signalChan:
-				println("Enabling gatekeeper now because signal was detected.")
-				enforceGatekeeper()
-			}
+			<-signalChan
+			println("Enabling gatekeeper now because signal was detected.")
+			enforceGatekeeper()
 
 			stdout.PipeStdOut(ctx, stdoutPipe)
 		}()

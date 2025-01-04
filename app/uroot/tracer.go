@@ -314,6 +314,9 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 								// When a seccomp filter is in place and a process attempts a disallowed system call, the kernel
 								// intercepts the call and sends SIGSYS to the process, preventing the system call from executing.
 								injectSignal = unix.SIGSYS
+							} else {
+								// Don't send SIGKILL; let the process continue with the simulated error return
+								injectSignal = 0
 							}
 
 							// Set registers before continuing with the syscall exit.
@@ -323,9 +326,6 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 									ExitCode: 3,
 								})
 							}
-
-							// Don't send SIGKILL; let the process continue with the simulated error return
-							injectSignal = 0
 
 						} else {
 							injectSignal = syscall.SIGKILL
