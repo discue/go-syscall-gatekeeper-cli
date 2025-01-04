@@ -162,8 +162,11 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 				if err := rec.syscallStop(p); err != nil {
 					if strings.Contains(err.Error(), "no such process") {
-						// race condition during shutdown of the tracee. do nothing now but exit
-						continue
+						println(fmt.Sprintf("Error trying to continue pid %d: %s", p.pid, err.Error()))
+						// race condition during shutdown of the tracee. do nothing. When calling wait again
+						// at the beginning of this loop we will receive the actual exit status
+						break
+
 					} else {
 						fmt.Printf("Unable to read syscall params and args of pid %d: %s. Exiting\n", p.pid, err.Error())
 						cancelFunc(&ExitEventError{
