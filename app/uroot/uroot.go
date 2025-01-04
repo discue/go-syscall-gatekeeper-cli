@@ -63,6 +63,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 	}
 
 	if runtimeConfig.Get().ExecutionMode == runtimeConfig.EXECUTION_MODE_TRACE {
+		// nolint:gosimple
 		go func() {
 			<-ctx.Done()
 			f, _ := os.Create("gk-syscalls-before-enforce.txt")
