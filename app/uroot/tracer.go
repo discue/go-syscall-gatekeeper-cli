@@ -283,6 +283,12 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						}
 
 						if !allow {
+							isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+							println(fmt.Sprintf("Trying to %s to fd %d which is a anon eventfd %t", name, fd, isEventFd))
+							allow = isEventFd
+						}
+
+						if !allow {
 							fdType := args.FdType(p.pid, fd)
 							println(fmt.Printf("Trying to write to fd %d which is of type %s\n", fd, fdType))
 						}
