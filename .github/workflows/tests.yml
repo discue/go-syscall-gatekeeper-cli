@@ -1,6 +1,9 @@
 # Terraform Provider testing workflow.
 name: tests
 
+concurrency: 
+  group: balrog
+
 # This GitHub action runs your tests for each pull request and push.
 # Optionally, you can turn it on using a schedule for regular testing.
 on:
