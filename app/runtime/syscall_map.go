@@ -182,25 +182,27 @@ var syscallMap = map[string][]string{
 		"writev",
 	},
 	"File Descriptor Operations": []string{
-		"dup",
-		"dup2",
-		"dup3",
-		"epoll_create",
-		"epoll_create1",
-		"epoll_ctl",
-		"epoll_pwait",
-		"epoll_pwait2",
-		"epoll_wait",
-		"eventfd",
-		"eventfd2",
-		"fcntl",
-		"poll",
-		"ppoll",
-		"ppoll_time64",
-		"pselect6",
-		"select",
-		"signalfd",
-		"signalfd4",
+		"dup",           // duplicate an existing file descriptor
+		"dup2",          // duplicate an existing file descriptor
+		"dup3",          // duplicate an existing file descriptor
+		"epoll_create",  // create an epoll file descriptor
+		"epoll_create1", // create a new instance of an epoll set for monitoring file descriptors
+		"epoll_ctl",     // program the event filter for an epoll instance
+		"epoll_pwait",   // wait for an I/O event on an epoll filedescriptor with the option for user-space signal masking
+		"epoll_pwait2",  // wait for an I/O event on an epoll file descriptor with optional behavior for handling signals
+		"epoll_wait",    // waits for an I/O event on an epoll file descriptor
+		"eventfd",       // used to create a file descriptor for event notification
+		"eventfd2",      // creates an "eventfd" object that can be used as an event wait/notify mechanism by user-space applications, and by the kernel to notify user-space applications of events
+		"fcntl",         // change the filedescriptor
+		"fcntl64",       // change the filedescriptor
+		"poll",          // waits for one of a set of file descriptors to become ready to perform I/O operations.
+		"ppoll",         // poll file descriptors with a timeout given with nanosecond precision
+		"ppoll_time32",  // used to poll the given file descriptor sets with the given timeout value in a Linux-based system
+		"ppoll_time64",  // used to poll the given file descriptor sets with the given timeout value in a Linux-based system
+		"pselect6",      // used to select or monitor many files or sockets for readability, writability, prior-to-termination conditions etc
+		"select",        // Wait for some event on a group of files or sockets
+		"signalfd",      // creates a file descriptor that can be used to accept signals
+		"signalfd4",     // - create a file descriptor to receive signals
 	},
 	"Memory Management": []string{
 		"brk",
