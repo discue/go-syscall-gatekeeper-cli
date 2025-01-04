@@ -188,73 +188,103 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 					allow := allowSyscall(name)
 
-					if !allow {
-						if name == "write" {
-							syscallArgs := rec.Syscall.Args
-							fd := syscallArgs[0].Int()
-							isStdStream := args.IsStandardStream(fd)
-							println(fmt.Sprintf("Trying to write to fd %d which is std stream %t", fd, isStdStream))
-							if isStdStream {
-								// we allow writing to standard streams
-								allow = true
-							}
+					if name == "openat" &&
+						runtime.Get().FileSystemAllowRead &&
+						!runtime.Get().FileSystemAllowWrite {
+						// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
+
+						args := rec.Syscall.Args
+						mode := args[3].ModeT() // Assuming mode_t is represented as uint
+
+						accessMode := ""
+						if mode&unix.O_RDONLY == unix.O_RDONLY {
+							accessMode = "read"
 						}
-					} else {
-						if name == "openat" &&
-							runtime.Get().FileSystemAllowRead &&
-							!runtime.Get().FileSystemAllowWrite {
-							// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
+						if mode&unix.O_WRONLY == unix.O_WRONLY {
+							accessMode = "write"
+						}
+						if mode&unix.O_RDWR == unix.O_RDWR {
+							accessMode = "write"
+						}
+						if mode&unix.O_RDWR == unix.O_APPEND {
+							accessMode = "write"
+						}
+						if mode&unix.O_RDWR == unix.O_CREAT {
+							accessMode = "write"
+						}
+						if mode&unix.O_RDWR == unix.O_TRUNC {
+							accessMode = "write"
+						}
 
-							args := rec.Syscall.Args
-							mode := args[3].ModeT() // Assuming mode_t is represented as uint
+						println(fmt.Printf("access mode is %s\n", accessMode))
+						isRead := accessMode == "read"
+						allow = isRead
+					} else if name == "write" || name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
+						syscallArgs := rec.Syscall.Args
+						fd := syscallArgs[0].Int()
 
-							accessMode := ""
-							if mode&unix.O_RDONLY == unix.O_RDONLY {
-								accessMode = "read"
-							}
-							if mode&unix.O_WRONLY == unix.O_WRONLY {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_RDWR {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_APPEND {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_CREAT {
-								accessMode = "write"
-							}
-							if mode&unix.O_RDWR == unix.O_TRUNC {
-								accessMode = "write"
-							}
+						isStdStream := args.IsStandardStream(fd)
+						allow = isStdStream
+						println(fmt.Sprintf("Trying to %s to fd %d which is a standard stream %t", name, fd, allow))
 
-							println(fmt.Printf("access mode is %s\n", accessMode))
+						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
+							isSocket := args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a socket %t", name, fd, isSocket))
+							allow = isSocket
+						}
 
-							if accessMode != "read" {
-								allow = false
-							}
-						} else if name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
-							if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient {
-								syscallArgs := rec.Syscall.Args
-								fd := syscallArgs[0].Int()
+						if !allow && runtime.Get().FileSystemAllowWrite {
+							isFile := args.IsFile(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a file %t", name, fd, isFile))
+							allow = isFile
+						}
 
-								isSocket := args.IsSocket(p.pid, fd)
-								println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isSocket))
-								if !isSocket {
-									// we allow writing to sockets
-									allow = false
-								}
-							} else if runtime.Get().FileSystemAllowWrite {
-								syscallArgs := rec.Syscall.Args
-								fd := syscallArgs[0].Int()
+						if !allow {
+							isPipe := args.IsPipe(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a pipe %t", name, fd, isPipe))
+							allow = isPipe
+						}
 
-								isFile := args.IsFile(p.pid, fd)
-								println(fmt.Sprintf("Trying to writev to fd %d which is socket %t", fd, isFile))
-								if isFile {
-									// we allow writing to sockets
-									allow = true
-								}
-							}
+						if !allow {
+							isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+							println(fmt.Sprintf("Trying to %s to fd %d which is a anon eventfd %t", name, fd, isEventFd))
+							allow = isEventFd
+						}
+
+						if !allow {
+							fdType := args.FdType(p.pid, fd)
+							println(fmt.Printf("Trying to write to fd %d which is of type %s\n", fd, fdType))
+						}
+
+					} else if name == "read" || name == "readv" {
+						syscallArgs := rec.Syscall.Args
+						fd := syscallArgs[0].Int()
+
+						isStdStream := args.IsStandardStream(fd)
+						allow = isStdStream
+
+						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
+							isSocket := args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a socket %t", name, fd, isSocket))
+							allow = isSocket
+						}
+
+						if !allow && runtime.Get().FileSystemAllowRead {
+							isFile := args.IsFile(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a file %t", name, fd, isFile))
+							// only allow writing to files
+							allow = isFile
+						}
+
+						if !allow {
+							isPipe := args.IsPipe(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s to fd %d which is a pipe %t", name, fd, isPipe))
+							allow = isPipe
+						}
+
+						if !allow {
+							fdType := args.FdType(p.pid, fd)
+							println(fmt.Printf("Trying to write to fd %d which is of type %s\n", fd, fdType))
 						}
 					}
 
