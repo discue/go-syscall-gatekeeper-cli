@@ -298,12 +298,22 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 								// Make sure the syscall is not valid anymore by changing the value that identifies it
 								rec.Syscall.Regs.Orig_rax = ^uint64(0)
 								rec.Syscall.Regs.Rax = ^uint64(0)
+
+								// In the context of seccomp, SIGSYS is the primary signal used to indicate a policy violation.
+								// When a seccomp filter is in place and a process attempts a disallowed system call, the kernel
+								// intercepts the call and sends SIGSYS to the process, preventing the system call from executing.
+								injectSignal = unix.SIGSYS
 							} else if rec.Event == SyscallExit {
 								// Syscall Exit: The kernel sets register rax to the result of the syscall. This is typically 0 for success or -1 (represented as the maximum unsigned integer value) for an error.
 								rec.Syscall.Regs.Orig_rax = ^uint64(0)
 								rec.Syscall.Regs.Rax = ^uint64(0)
 								// Syscall Exit: If Rax indicates an error (-1), Rdx will typically contain the specific error code (the errno) explaining the reason for the failure.
 								rec.Syscall.Regs.Rdx = uint64(unix.EPERM) // Set errno
+
+								// In the context of seccomp, SIGSYS is the primary signal used to indicate a policy violation.
+								// When a seccomp filter is in place and a process attempts a disallowed system call, the kernel
+								// intercepts the call and sends SIGSYS to the process, preventing the system call from executing.
+								injectSignal = unix.SIGSYS
 							}
 
 							// Set registers before continuing with the syscall exit.
