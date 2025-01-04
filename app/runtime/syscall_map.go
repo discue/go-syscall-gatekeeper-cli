@@ -160,6 +160,7 @@ var syscallMap = map[string][]string{
 		"getsockname",
 		"getsockopt",
 		"listen",
+		"read",
 		// "recv",
 		"recvfrom",
 		// "recvmmsg",
