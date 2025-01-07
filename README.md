@@ -42,8 +42,8 @@ Exiting with code 111
 exit status 111
 ```
 
-### ❌ Without filesystem permissions, no permission access network
-In this second case, `curl` is started with a default set of permissions and **read access for the file system**. The command still fails because, access to the network-related syscalls gets denied.
+### ❌ With filesystem permissions, but no permission to access network
+In this second case, `curl` is started with a default set of permissions and **read access for the file system**. The command still fails because access to the network-related socket syscall gets denied.
 ```bash
 $ gatekeeper run --allow-file-system-read curl -v google.com
 [...]
@@ -89,11 +89,11 @@ The `run` subcommand runs the given command without any syscall restrictions. Th
 ```
 
 ### 🤺 Permissions
-You can pass the following flags, to allow:
-- `--allow-file-system-read`: To allow the started process to read from the file system
-- `--allow-file-system-write`: To allow the started process to write to the file system
-- `--allow-network-client`: To allow the started process to open sockets and open connections to other servers
-- `--allow-network-server`: To allow the started process to listen on ports and accept incoming connections
+You can pass the following flags:
+- `--allow-file-system-read` to allow the started process to read from the file system,
+- `--allow-file-system-write` to allow the started process to write to the file system,
+- `--allow-network-client` to allow the started process to open sockets and open connections to other servers,
+- `--allow-network-server` to allow the started process to listen on ports and accept incoming connections.
 
 ### 🔎 Trace
 The `trace` subcommand run the given binary and traces the syscalls. In this case, the `gatekeeper` will 
