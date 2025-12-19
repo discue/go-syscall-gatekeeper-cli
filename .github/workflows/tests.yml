@@ -9,6 +9,7 @@ concurrency:
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 # Testing only needs permissions to read the repository contents.
 permissions:
