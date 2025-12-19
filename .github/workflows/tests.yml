@@ -1,7 +1,7 @@
 # Terraform Provider testing workflow.
 name: tests
 
-concurrency: 
+concurrency:
   group: balrog
 
 # This GitHub action runs your tests for each pull request and push.
@@ -25,10 +25,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
       - run: sudo apt-get install -y libseccomp-dev pkg-config
-      - run: echo "GOOS=$(go env GOOS), GOARCH=$(go env GOARCH), CGO_ENABLED=$(go env CGO_ENABLED)"
+      - run: echo "GOOS=$(go env GOOS), GOARCH=$(go env GOARCH), CGO_ENABLED=$(go env CGO_ENABLED), CGO_CFLAGS=$(go env CGO_CFLAGS), CGO_LDFLAGS=$(go env CGO_LDFLAGS)"
       - run: echo $CGO_ENABLED
       - run: go mod download
       - run: ./test.sh
