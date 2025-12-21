@@ -1,7 +1,14 @@
 #!/bin/bash
 
-set -uo pipefail
+set -xuo pipefail
 
 declare -r main_path="$1"
 
-$main_path run --allow-file-system-read awk '{print $1}' run.sh
+$main_path run \
+--allow-file-system-read \
+--allow-process-management \
+--allow-memory-management \
+--allow-process-synchronization \
+--allow-misc \
+-- \
+awk '{ print }' run.sh
