@@ -1,0 +1,15 @@
+- describe: reverse (rev) with default permissions
+  expect_failure: true
+  permissions: []
+- describe: reverse (rev) with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: reverse (rev) with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: reverse (rev) with read-only filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read

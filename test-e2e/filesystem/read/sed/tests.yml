@@ -1,0 +1,15 @@
+- describe: sed with default permissions
+  expect_failure: true
+  permissions: []
+- describe: sed with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: sed with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: sed with read-only filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read

@@ -1,0 +1,19 @@
+- describe: touch with default permissions
+  expect_failure: true
+  permissions: []
+- describe: touch with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: touch with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: touch with read filesystem permissions
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: touch with write filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write

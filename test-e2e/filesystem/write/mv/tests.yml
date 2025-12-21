@@ -1,0 +1,19 @@
+- describe: mv with default permissions
+  expect_failure: true
+  permissions: []
+- describe: mv with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: mv with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: mv with read filesystem permissions
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: mv with write filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write

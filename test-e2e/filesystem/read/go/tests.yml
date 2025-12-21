@@ -1,0 +1,15 @@
+- describe: go binary with default permissions
+  expect_failure: true
+  permissions: []
+- describe: go binary with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: go binary with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: go binary with read-only filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read

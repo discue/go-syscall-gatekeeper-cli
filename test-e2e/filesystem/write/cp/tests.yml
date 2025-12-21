@@ -1,0 +1,19 @@
+- describe: cp with default permissions
+  expect_failure: true
+  permissions: []
+- describe: cp with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: cp with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: cp with read filesystem permissions
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: cp with write filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write

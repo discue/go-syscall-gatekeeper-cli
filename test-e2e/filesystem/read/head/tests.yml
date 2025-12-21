@@ -1,0 +1,15 @@
+- describe: head a file default permissions
+  expect_failure: true
+  permissions: []
+- describe: head a file with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: head a file with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: head a file with read-only filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read

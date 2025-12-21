@@ -1,0 +1,15 @@
+- describe: tail with default permissions
+  expect_failure: true
+  permissions: []
+- describe: tail with network client permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: tail with network server permissions
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: tail with read-only filesystem permissions
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read
