@@ -55,7 +55,11 @@ type Task interface {
 }
 
 func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Context, error) {
-	cmd := exec.CommandContext(ctx, bin, args...)
+	executable, err := exec.LookPath(bin)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to find executable %s: %w", bin, err)
+	}
+	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Env = getEnv(os.Getpid())
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Cancel = func() error {
