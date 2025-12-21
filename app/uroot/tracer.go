@@ -177,48 +177,65 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 				rax := rec.Syscall.Regs.Orig_rax
 				name, err := sec.ScmpSyscall(rec.Syscall.Sysno).GetName()
+				isExitEvent := rec.Event == SyscallExit
 				if err != nil {
 					// ending up here, we were not able to get the name of the syscall
 					// suspicious because the process might not have been stopped by a syscall
 					// but something else, so printing here for now while keeping the tracee
 					// up and running
-					fmt.Printf("Unknown syscall detected: %s %d\n", err.Error(), rax)
+					fmt.Printf("Unknown syscall detected for exit->%t: %s %d\n", isExitEvent, err.Error(), rax)
 				} else {
 					addSyscallToCollection(rax, name)
 
 					allow := allowSyscall(name)
 
-					if name == "openat" &&
+					if (name == "openat" || name == "open" || name == "openat2") &&
 						runtime.Get().FileSystemAllowRead &&
 						!runtime.Get().FileSystemAllowWrite {
-						// if runtime.Get().FilesystemAllowRead && !runtime.Get().FilesystemAllowWrite {
-
-						args := rec.Syscall.Args
-						mode := args[3].ModeT() // Assuming mode_t is represented as uint
-
-						accessMode := ""
-						if mode&unix.O_RDONLY == unix.O_RDONLY {
-							accessMode = "read"
+						// Gate file open syscalls when only read access is allowed.
+						if name == "openat" {
+							// openat(dirfd, pathname, flags, mode)
+							flags := int(rec.Syscall.Args[3].Uint())
+							writeAccMask := unix.O_WRONLY | unix.O_RDWR
+							if flags&writeAccMask == 0 {
+								// Even with O_RDONLY, certain flags imply write intent
+								allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
+							} else {
+								allow = false
+							}
+						} else if name == "open" {
+							// open(pathname, flags, mode)
+							flags := int(rec.Syscall.Args[1].Uint())
+							writeAccMask := unix.O_WRONLY | unix.O_RDWR
+							if flags&writeAccMask == 0 {
+								// Even with O_RDONLY, certain flags imply write intent
+								allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
+							} else {
+								allow = false
+							}
+						} else if name == "openat2" {
+							// openat2(dirfd, pathname, struct open_how *how, size_t size)
+							// Read open_how to examine flags
+							type openHow struct {
+								Flags   uint64
+								Mode    uint64
+								Resolve uint64
+							}
+							addr := rec.Syscall.Args[2].Pointer()
+							var how openHow
+							if _, err := p.Read(addr, &how); err != nil {
+								fmt.Printf("Unable to read open_how for openat2: %s\n", err.Error())
+								allow = false
+							} else {
+								flags := int(how.Flags)
+								writeAccMask := unix.O_WRONLY | unix.O_RDWR
+								if flags&writeAccMask == 0 {
+									allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
+								} else {
+									allow = false
+								}
+							}
 						}
-						if mode&unix.O_WRONLY == unix.O_WRONLY {
-							accessMode = "write"
-						}
-						if mode&unix.O_RDWR == unix.O_RDWR {
-							accessMode = "write"
-						}
-						if mode&unix.O_RDWR == unix.O_APPEND {
-							accessMode = "write"
-						}
-						if mode&unix.O_RDWR == unix.O_CREAT {
-							accessMode = "write"
-						}
-						if mode&unix.O_RDWR == unix.O_TRUNC {
-							accessMode = "write"
-						}
-
-						println(fmt.Printf("access mode is %s\n", accessMode))
-						isRead := accessMode == "read"
-						allow = isRead
 					} else if name == "write" || name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
@@ -348,9 +365,11 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 				// make events only for all the unexpected ones.
 				fallthrough
 
-			// Group-stop.
-			//
-			// TODO: do something.
+				// Group-stop.
+				//
+				// TODO: do something.
+			case unix.SIGCHLD:
+
 			case syscall.SIGTSTP, syscall.SIGTTOU, syscall.SIGTTIN:
 				rec.Event = SignalStop
 				injectSignal = signal
@@ -437,6 +456,20 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 				cancelFunc(&ExitEventError{
 					ExitCode: 3,
 				})
+			}
+		}
+
+		// if another child was started, we need to continue the child, too
+		if rec.Event == NewChild {
+			// Which process was stopped?
+			p, ok := t.processes[rec.NewChild.PID]
+			if !ok {
+				continue
+			}
+
+			e := p.cont(0)
+			if e != nil {
+				fmt.Printf("Error continuing child process %d: %s\n", pid, e.Error())
 			}
 		}
 	}

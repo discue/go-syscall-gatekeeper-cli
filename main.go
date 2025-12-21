@@ -45,6 +45,7 @@ func (s *syscallDeniedAction) Set(value string) error {
 
 func main() {
 	mainCtx, cancel := context.WithCancel(context.Background())
+	println(fmt.Sprintf("gatekeeper started with %#+v", os.Args))
 
 	tracee := startTracee(mainCtx)
 	waitForShutdown(cancel, tracee)
@@ -52,8 +53,11 @@ func main() {
 
 func startTracee(c context.Context) context.Context {
 	args := configureAndParseArgs()
+	program := args[0]
+	programArgs := args[1:]
+	println(fmt.Sprintf("starting %s with args %#+v", program, programArgs))
 
-	_, exitContext, err := uroot.Exec(c, args[0], args[1:])
+	_, exitContext, err := uroot.Exec(c, program, programArgs)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -73,6 +77,7 @@ func configureAndParseArgs() []string {
 	allowFileSystemReadAccess := runCmd.Bool("allow-file-system-read", false, "a bool")
 	allowFileSystemWriteAccess := runCmd.Bool("allow-file-system-write", false, "a bool")
 	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "alias for --allow-file-system-write")
+	allowFileSystemPermissionsAccess := runCmd.Bool("allow-file-system-permissions", false, "a bool")
 
 	allowNetworkClient := runCmd.Bool("allow-network-client", false, "a bool")
 	allowNetworkServer := runCmd.Bool("allow-network-server", false, "a bool")
@@ -120,6 +125,10 @@ func configureAndParseArgs() []string {
 		allowList.AllowAllFileDescriptors()
 		runtime.Get().FsConfig.FileSystemAllowRead = true
 		runtime.Get().FsConfig.FileSystemAllowWrite = false
+	}
+
+	if *allowFileSystemPermissionsAccess {
+		allowList.AllowAllFilePermissions()
 	}
 
 	if *allowProcessManagement {
@@ -234,8 +243,10 @@ func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
 
 	select {
 	case <-signal.Done():
+		println("Received signal from outside")
 		break
 	case <-tracee.Done():
+		println("Tracee got cancelled")
 		break
 	}
 

@@ -1,28 +1,24 @@
 package runtime
 
+// Groups below intentionally separate raw IO operations from metadata-changing operations.
+// This allows granting write IO (write*, pwrite*, fallocate) without implicitly enabling
+// file creation, renames, or unlinking unless desired. Tracer logic further gates intent.
 var syscallMap = map[string][]string{
 	"File Read Operations": []string{
 		"access",
-		"close",
-		"close_range",
 		"faccessat",
 		"faccessat2",
 		"fadvise64",
-		"fallocate",
 		"fstat",
-		"fstatat64",
 		"fstatfs",
-		"fstatfs64",
 		"getdents",
 		"getdents64",
-		"llseek",
 		"lseek",
 		"lstat",
 		"name_to_handle_at",
 		"newfstatat",
-		// "open", not tested
-		"openat",
-		"read",
+		"pread64",
+		"preadv",
 		"readahead",
 		"readlink",
 		"readlinkat",
@@ -31,30 +27,36 @@ var syscallMap = map[string][]string{
 		"statfs",
 		"statx",
 	},
+	// Raw IO write operations (data writes or allocation hints), separated from metadata ops.
 	"File Write Operations": []string{
-		"creat",
 		"copy_file_range",
-		"ftruncate",
-		"ftruncate64",
-		"futimesat",
+		"fallocate",
+		"sync_file_range",
+		"write",
+		"writev",
+		"pwrite64",
+		"pwritev",
+	},
+	"File Open": []string{
+		"open",
+		"openat",
+		"openat2",
+	},
+	// File creation and metadata-changing operations (ownership, links, renames, times, size).
+	"File Create/Metadata": []string{
+		"creat",
+		"truncate",
+		"rename",
+		"renameat",
+		"renameat2",
 		"link",
 		"linkat",
-		"lremovexattr",
 		"mkdir",
 		"mkdirat",
 		"mknod",
 		"mknodat",
-		"openat2", // moved to write operations due to lack of applications that can be used for testing
-		"removexattr",
-		"rename",
-		"renameat",
-		"renameat2",
-		"rmdir",
-		"sync_file_range",
 		"symlink",
 		"symlinkat",
-		"truncate",
-		"truncate64",
 		"umask",
 		"unlink",
 		"unlinkat",
@@ -62,20 +64,19 @@ var syscallMap = map[string][]string{
 		"utimensat",
 		"utimensat_time64",
 		"utimes",
-		"write",
-		"writev",
+		"futimesat",
 	},
 	"File Permissions": []string{
 		"chmod",
 		"chown",
 		"fchmod",
 		"fchmodat",
-		"fchmodat2",
 		"fchown",
 		"fchownat",
 	},
 	"Process Management": []string{
 		"arch_prctl",
+		"alarm",
 		"clone",
 		"clone3",
 		"fork",
@@ -123,33 +124,23 @@ var syscallMap = map[string][]string{
 		"set_tid_address",
 	},
 	"Networking Client": []string{
-		// "accept",
-		// "accept4",
 		"bind",
 		"connect",
 		"getpeername",
 		"getsockname",
 		"getsockopt",
-		// "listen",
 		"recv",
 		"recvfrom",
 		"recvmmsg",
 		"recvmmsg_time64",
 		"recvmsg",
 		"send",
-		"sendfile",
 		"sendmmsg",
 		"sendmsg",
 		"sendto",
 		"setsockopt",
 		"shutdown",
 		"socket",
-		"socketpair",
-		"inotify_add_watch",
-		"inotify_init",
-		"inotify_init1",
-		"inotify_rm_watch",
-		"write",
 	},
 	"Networking Server": []string{
 		"accept",
@@ -160,27 +151,20 @@ var syscallMap = map[string][]string{
 		"getsockname",
 		"getsockopt",
 		"listen",
-		"read",
-		// "recv",
 		"recvfrom",
-		// "recvmmsg",
-		// "recvmmsg_time64",
 		"recvmsg",
-		// "send",
-		// "sendfile",
-		// "sendmmsg",
-		// "sendmsg",
 		"sendto",
 		"setsockopt",
 		"shutdown",
 		"socket",
-		"socketpair",
-		"inotify_add_watch",
-		"inotify_init",
-		"inotify_init1",
-		"inotify_rm_watch",
-		"write",
-		"writev",
+	},
+	"Basic File Descriptor Operations": []string{
+		"close",
+		"close_range",
+		"read",   // generic read on any file descriptor (files, sockets, pipes)
+		"readv",  // vectored read on any file descriptor
+		"write",  // generic write on any file descriptor (files, sockets, pipes)
+		"writev", // vectored write on any file descriptor
 	},
 	"File Descriptor Operations": []string{
 		"dup",           // duplicate an existing file descriptor
@@ -195,15 +179,15 @@ var syscallMap = map[string][]string{
 		"eventfd",       // used to create a file descriptor for event notification
 		"eventfd2",      // creates an "eventfd" object that can be used as an event wait/notify mechanism by user-space applications, and by the kernel to notify user-space applications of events
 		"fcntl",         // change the filedescriptor
-		"fcntl64",       // change the filedescriptor
 		"poll",          // waits for one of a set of file descriptors to become ready to perform I/O operations.
 		"ppoll",         // poll file descriptors with a timeout given with nanosecond precision
-		"ppoll_time32",  // used to poll the given file descriptor sets with the given timeout value in a Linux-based system
 		"ppoll_time64",  // used to poll the given file descriptor sets with the given timeout value in a Linux-based system
 		"pselect6",      // used to select or monitor many files or sockets for readability, writability, prior-to-termination conditions etc
 		"select",        // Wait for some event on a group of files or sockets
 		"signalfd",      // creates a file descriptor that can be used to accept signals
 		"signalfd4",     // - create a file descriptor to receive signals
+		"pipe",
+		"pipe2",
 	},
 	"Memory Management": []string{
 		"brk",
@@ -272,10 +256,9 @@ var syscallMap = map[string][]string{
 		"setxattr",
 		"fsetxattr",
 		"lsetxattr",
+		"lremovexattr",
 		"removexattr",
 		"fremovexattr",
-		"chmod",
-		"chown",
 		"listxattr",
 		"setuid",
 		"setgid",
@@ -310,6 +293,7 @@ var syscallMap = map[string][]string{
 		"shmctl",
 		"shmdt",
 		"shmget",
+		"socketpair",
 		"msgctl",
 		"msgget",
 		"msgrcv",
@@ -350,13 +334,8 @@ var syscallMap = map[string][]string{
 		"io_getevents",
 		"ioprio_get",
 		"ioprio_set",
+		"io_setup",
 		"io_submit",
-		"pread64",
-		"preadv",
 		"prlimit64",
-		"pwrite64",
-		"pwritev",
-		"pipe",
-		"pipe2",
 	},
 }

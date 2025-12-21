@@ -10,10 +10,19 @@ func NewSyscallAllowList() *SyscallAllowList {
 
 func (sal *SyscallAllowList) AllowAllFileSystemReadAccess() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["File Read Operations"]...)
+	// Opening files is required before read operations; gated by tracer flags for O_RDONLY/O_WRONLY
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Open"]...)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Basic File Descriptor Operations"]...)
 }
 
 func (sal *SyscallAllowList) AllowAllFileSystemWriteAccess() {
+	// Grant raw IO write operations (write*, pwrite*, fallocate, copy_file_range, sync_file_range)
 	sal.Syscalls = append(sal.Syscalls, syscallMap["File Write Operations"]...)
+	// Also grant file creation and metadata-changing operations (rename*, link*, mkdir*, symlink*, umask, unlink*, utime*)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Create/Metadata"]...)
+	// Opening files is required before write operations; gated by tracer flags for O_RDONLY/O_WRONLY
+	sal.Syscalls = append(sal.Syscalls, syscallMap["File Open"]...)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Basic File Descriptor Operations"]...)
 }
 
 func (sal *SyscallAllowList) AllowAllFilePermissions() {
@@ -49,11 +58,12 @@ func (sal *SyscallAllowList) AllowProcessManagement() {
 // }
 
 func (sal *SyscallAllowList) AllowNetworking() {
-	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Client"]...)
-	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Server"]...)
+	sal.AllowNetworkClient()
+	sal.AllowNetworkServer()
 }
 
 func (sal *SyscallAllowList) AllowNetworkClient() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Basic File Descriptor Operations"]...)
 	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Client"]...)
 }
 
