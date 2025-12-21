@@ -33,7 +33,7 @@ While it's obvious, why `curl` needs network permissions, the filesystem permiss
 ### ❌ No filesystem permissions
 In this case, `curl` is only started with a default set of permissions. The command fails because, access to the filesystem gets denied.
 ```bash
-$ gatekeeper run curl -v google.com
+$ gatekeeper run -- curl -v google.com
 [...]
 Syscall not allowed: access
 enter [pid 4855] access (/etc/ld.so.preload)
@@ -45,7 +45,7 @@ exit status 111
 ### ❌ With filesystem permissions, but no permission to access network
 In this second case, `curl` is started with a default set of permissions and **read access for the file system**. The command still fails because access to the network-related socket syscall gets denied.
 ```bash
-$ gatekeeper run --allow-file-system-read curl -v google.com
+$ gatekeeper run --allow-file-system-read -- curl -v google.com
 [...]
 Syscall not allowed: socket
 enter [pid 4996] socket
@@ -57,7 +57,7 @@ exit status 111
 ### ✅ With filesystem and network permissions
 In this final case, `curl` is started with read access to the filesystem **and** network. The command then exits with success.
 ```bash
-$ gatekeeper run --allow-file-system-read --allow-network-client curl -v google.com
+$ gatekeeper run --allow-file-system-read --allow-network-client -- curl -v google.com
 [...]
 <HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
 <TITLE>301 Moved</TITLE></HEAD><BODY>
@@ -79,7 +79,7 @@ go get https://github.com/discue/go-syscall-gatekeeper
 
 ## 🔣 Usage
 ```bash
-./gatekeeper [run|trace] [binary] [args...]
+./gatekeeper [run|trace] [flags] -- [binary] [args...]
 ```
 ### 🚀 Run
 The `run` subcommand runs the given command without any syscall restrictions. This is as good as calling the target program directly.
@@ -102,12 +102,20 @@ The `trace` subcommand run the given binary and traces the syscalls. In this cas
 ./gatekeeper trace ls -l
 ```
 
-## 🧪 Running Tests
+## 🧪 Running Unit Tests
 To run tests, run the following command
 
 ```bash
 ./test.sh
 ```
+
+# 🚧 Running E2E Tests
+To run the end-to-end tests, run the following command
+
+```bash
+./test-e2e.sh
+```
+This will run all the end-to-end tests located in the `test-e2e` directory
 
 ## 📄 License
 [BSD 3-Clause](https://choosealicense.com/licenses/bsd-3-clause/)
