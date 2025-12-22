@@ -2,4 +2,6 @@
 
 set -euo pipefail
 
-go test ./...
+export CGO_ENABLED=1
+
+go test ./... -cover
