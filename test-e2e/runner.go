@@ -100,7 +100,7 @@ func main() {
 	for _, s := range suites {
 		for idx, tc := range s.Cases {
 			label := fmt.Sprintf("%s [%d] %s", relPath(testRoot, s.YamlPath), idx+1, tc.Describe)
-			fmt.Printf("pending %s\r", label)
+			fmt.Printf("\x1b[34mpending\x1b[0m %s\r", label)
 			ok, timedOut, out := runOne(testRoot, &s, tc, time.Duration(timeoutSec)*time.Second)
 			// Clear the pending line
 			fmt.Print("\r\x1b[K")
