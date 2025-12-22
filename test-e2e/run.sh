@@ -54,9 +54,11 @@ trap 'rm -rf .tmp || true && rm ./gatekeeper' EXIT # always clean up before exit
 
 # Find all files ending with .sh in all subfolders and then iterate over them
 for file in $(find . -mindepth 2 -type f -name "*.sh"); do
+    # Flag to indicate this test case failed (non-empty means failed)
+    test_failed=""
     if [[ "$only_pattern" != "*" && ! "$file" =~ $only_pattern ]]; then
         continue
-        elif [[ "$file" =~ "before.sh" ]]; then
+        elif [[ "$file" =~ "before.sh" || "$file" =~ "after.sh" ]]; then
         continue
     fi
     
@@ -69,31 +71,38 @@ for file in $(find . -mindepth 2 -type f -name "*.sh"); do
     
     echo -ne "\e[36mpending\033[0m $file\033[K\r"
     
-    output=$("timeout" "20s" "$file" "$bin_path" 2>&1)
+    output=""
+    timeout 20s $file $bin_path
     exitCode=$?
     
     echo -ne "\033[K\r" # reset previous log line to give the impression of overriding it
     
     if [ $exitCode -eq 0 ]; then
         echo -e "\e[32mok\033[0m $file "
+        echo -e "$output"
         
         elif [ $exitCode -eq 124 ]; then
         echo -e "\e[33mtimeout\033[0m $file"
         echo -e "$output"
         test_failures+=("timeout -> $file")
-        
-        if [[ $fail_fast -eq 1 ]]; then
-            break
-        fi
+        test_failed="timeout"
     else
         echo -e "\e[91mfailed\033[0m $file"
         echo -e ">> Expected exit code 0 and got $exitCode"
         echo -e "$output"
         test_failures+=("failed -> $file")
-        
-        if [[ $fail_fast -eq 1 ]]; then
-            break
-        fi
+        test_failed="failed"
+    fi
+    
+    # Run after.sh if present in the current test directory
+    if [[ -f "$dir/after.sh" ]]; then
+        echo "Running after.sh for $file"
+        "$dir/after.sh"
+    fi
+    
+    # If fail-fast is enabled and the test failed, break the loop
+    if [[ $fail_fast -eq 1 && -n "$test_failed" ]]; then
+        break
     fi
     
     if [[ -d ".tmp" ]]; then
