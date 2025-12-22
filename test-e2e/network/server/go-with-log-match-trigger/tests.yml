@@ -1,0 +1,24 @@
+- describe: go server triggered by log matching with default permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions: []
+- describe: go server triggered by log matching with network client permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: go server triggered by log matching with network server permissions succeeds
+  configure_gatekeeper_entrypoint: false
+  expect_failure: false
+  permissions:
+    - --allow-network-server
+- describe: go server triggered by log matching with read filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: go server triggered by log matching with write filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write

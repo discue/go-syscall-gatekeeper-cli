@@ -1,15 +1,15 @@
-- describe: grep a file default permissions
+- describe: grep a file default permissions fails
   expect_failure: true
   permissions: []
-- describe: grep a file with network client permissions
+- describe: grep a file with network client permissions fails
   expect_failure: true
   permissions:
     - --allow-network-client
-- describe: grep a file with network server permissions
+- describe: grep a file with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
-- describe: grep a file with read-only filesystem permissions
+- describe: grep a file with read-only filesystem permissions succeeds
   expect_failure: false
   permissions:
     - --allow-file-system-read

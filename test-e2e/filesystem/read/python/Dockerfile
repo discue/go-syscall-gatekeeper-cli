@@ -1,4 +1,4 @@
-FROM golang
+FROM debian
 
 COPY gatekeeper /gatekeeper
 RUN chmod +x /gatekeeper

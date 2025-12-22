@@ -1,15 +1,15 @@
-- describe: number lines (nl) with default permissions
+- describe: number lines (nl) with default permissions fails
   expect_failure: true
   permissions: []
-- describe: number lines (nl) with network client permissions
+- describe: number lines (nl) with network client permissions fails
   expect_failure: true
   permissions:
     - --allow-network-client
-- describe: number lines (nl) with network server permissions
+- describe: number lines (nl) with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
-- describe: number lines (nl) with read-only filesystem permissions
+- describe: number lines (nl) with read-only filesystem permissions succeeds
   expect_failure: false
   permissions:
     - --allow-file-system-read

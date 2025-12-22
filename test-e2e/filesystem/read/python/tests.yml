@@ -1,15 +1,15 @@
-- describe: python script with default permissions
+- describe: python script with default permissions fails
   expect_failure: true
   permissions: []
-- describe: python script with network client permissions
+- describe: python script with network client permissions fails
   expect_failure: true
   permissions:
     - --allow-network-client
-- describe: python script with network server permissions
+- describe: python script with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
-- describe: python script with read-only filesystem permissions
+- describe: python script with read-only filesystem permissions succeeds
   expect_failure: false
   permissions:
     - --allow-file-system-read

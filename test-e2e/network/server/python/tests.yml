@@ -1,0 +1,26 @@
+- describe: python server with default permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions: []
+- describe: python server with network client permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+    - --allow-network-client
+- describe: python server with network server permissions succeeds
+  configure_gatekeeper_entrypoint: false
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read
+    - --allow-network-server
+- describe: python server with read filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: python server with write filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write

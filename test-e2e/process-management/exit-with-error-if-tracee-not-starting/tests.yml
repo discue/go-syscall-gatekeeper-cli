@@ -1,0 +1,3 @@
+- describe: gatekeeper exits with 1 if tracee not starting
+  expect_failure: true
+  permissions: []

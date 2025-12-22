@@ -1,0 +1,20 @@
+- describe: nc with default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: nc with network client permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-network-client
+    - --allow-file-system-read
+- describe: nc with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: nc with read filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: nc with write filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write

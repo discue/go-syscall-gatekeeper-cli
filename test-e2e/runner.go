@@ -24,6 +24,12 @@ type testCase struct {
 	Describe      string   `yaml:"describe"`
 	ExpectFailure bool     `yaml:"expect_failure"`
 	Permissions   []string `yaml:"permissions"`
+	// When true, do not wrap the container with /gatekeeper. Instead,
+	// pass permissions to the container and let its entrypoint handle
+	// starting gate-kept processes (e.g., the server) while running
+	// other tools (e.g., curl) separately.
+	// Defaults to true when omitted in YAML.
+	ConfigureGatekeeperEntrypoint *bool `yaml:"configure_gatekeeper_entrypoint"`
 }
 
 type suite struct {
@@ -99,7 +105,7 @@ func main() {
 			// Clear the pending line
 			fmt.Print("\r\x1b[K")
 			if ok {
-				fmt.Printf("ok %s\n", label)
+				fmt.Printf("\x1b[32mok\x1b[0m %s\n", label)
 			} else if timedOut {
 				fmt.Printf("timeout %s\n", label)
 				failures = append(failures, fmt.Sprintf("timeout -> %s", s.YamlPath))
@@ -107,7 +113,7 @@ func main() {
 					goto END
 				}
 			} else {
-				fmt.Printf("failed %s\n", label)
+				fmt.Printf("\x1b[91mfailed\x1b[0m %s\n", label)
 				if out != "" {
 					fmt.Println(out)
 				}
@@ -292,13 +298,34 @@ func dockerBuild(tag, contextDir string) error {
 }
 
 func runOne(testRoot string, s *suite, tc testCase, timeout time.Duration) (ok bool, timedOut bool, out string) {
-	// Compose args: /gatekeeper trace <permissions> -- <CMD from Dockerfile>
-	args := []string{"run", "--rm", "--entrypoint", "/gatekeeper", s.ImageTag, "trace"}
-	if len(tc.Permissions) > 0 {
-		args = append(args, tc.Permissions...)
+	var args []string
+	// Default to true if not specified
+	cfgEntrypoint := true
+	if tc.ConfigureGatekeeperEntrypoint != nil {
+		cfgEntrypoint = *tc.ConfigureGatekeeperEntrypoint
 	}
-	args = append(args, "--")
-	args = append(args, s.CmdArgs...)
+
+	if cfgEntrypoint {
+		// Default: wrap whole container with gatekeeper.
+		// Compose args: /gatekeeper trace <permissions> -- <CMD from Dockerfile>
+		args = []string{"run", "--rm", "--entrypoint", "/gatekeeper", s.ImageTag, "run"}
+		if len(tc.Permissions) > 0 {
+			args = append(args, tc.Permissions...)
+		}
+		args = append(args, "--")
+		args = append(args, s.CmdArgs...)
+	} else {
+
+		// Let container's CMD/entrypoint run as-is, and pass permissions
+		// via environment for the script to consume.
+		args = []string{"run", "--rm"}
+		if len(tc.Permissions) > 0 {
+			// Space-join flags for easy parsing in shell
+			joined := strings.Join(tc.Permissions, " ")
+			args = append(args, "-e", "SERVER_PERMISSIONS="+joined)
+		}
+		args = append(args, s.ImageTag)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

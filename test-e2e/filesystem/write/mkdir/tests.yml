@@ -1,19 +1,19 @@
-- describe: mkdir with default permissions
+- describe: mkdir with default permissions fails
   expect_failure: true
   permissions: []
-- describe: mkdir with network client permissions
+- describe: mkdir with network client permissions fails
   expect_failure: true
   permissions:
     - --allow-network-client
-- describe: mkdir with network server permissions
+- describe: mkdir with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
-- describe: mkdir with read filesystem permissions
+- describe: mkdir with read filesystem permissions fails
   expect_failure: true
   permissions:
     - --allow-file-system-read
-- describe: mkdir with write filesystem permissions
+- describe: mkdir with write filesystem permissions succeeds
   expect_failure: false
   permissions:
     - --allow-file-system-write

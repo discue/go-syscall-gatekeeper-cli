@@ -1,0 +1,22 @@
+- describe: starting a child process with default permission fails
+  expect_failure: true
+  permissions: []
+- describe: starting a child process with network client permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: starting a child process with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: starting a child process with read-only filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+    - --allow-network-client # socket syscall is required by bash somehow
+- describe: starting a child process with write filesystem permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write
+    - --allow-process-communication
+    - --allow-network-client # socket syscall is required by bash somehow

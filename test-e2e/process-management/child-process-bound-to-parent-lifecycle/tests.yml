@@ -1,0 +1,6 @@
+- describe: nodejs server with network server permissions succeeds
+  configure_gatekeeper_entrypoint: false
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read
+    - --allow-network-server

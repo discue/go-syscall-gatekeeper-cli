@@ -2,4 +2,6 @@
 
 set -e
 
-cd test-e2e && ./run.sh $@
+export CGO_ENABLED=1
+
+cd test-e2e && go run runner.go $@
