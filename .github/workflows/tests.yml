@@ -28,8 +28,6 @@ jobs:
           go-version-file: "go.mod"
           cache: true
       - run: sudo apt-get install -y libseccomp-dev pkg-config
-      - run: echo "GOOS=$(go env GOOS), GOARCH=$(go env GOARCH), CGO_ENABLED=$(go env CGO_ENABLED), CGO_CFLAGS=$(go env CGO_CFLAGS), CGO_LDFLAGS=$(go env CGO_LDFLAGS)"
-      - run: echo $CGO_ENABLED
       - run: go mod download
       - run: ./test.sh
       - run: ./test-e2e.sh
