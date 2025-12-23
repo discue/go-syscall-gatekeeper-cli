@@ -11,7 +11,7 @@ import (
 
 func main() {
 	server := &http.Server{Addr: ":8082", Handler: nil} // Create server instance
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {

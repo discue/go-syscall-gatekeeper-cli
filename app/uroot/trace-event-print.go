@@ -30,17 +30,17 @@ func PrintTraces(w io.Writer) EventCallback {
 	return func(t Task, record *TraceRecord) {
 		switch record.Event {
 		case SyscallEnter:
-			fmt.Fprintln(w, SysCallEnter(t, record.Syscall))
+			// _, _ = fmt.Fprintln(w, SysCallEnter(t, record.Syscall))
 		case SyscallExit:
-			// fmt.Fprintln(w, SysCallExit(t, record.Syscall))
+			// _, _ = fmt.Fprintln(w, SysCallExit(t, record.Syscall))
 		case SignalExit:
-			fmt.Fprintf(w, "PID %d exited from signal %s\n", record.PID, signalString(record.SignalExit.Signal))
+			_, _ = fmt.Fprintf(w, "PID %d exited from signal %s\n", record.PID, signalString(record.SignalExit.Signal))
 		case Exit:
-			fmt.Fprintf(w, "PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
+			_, _ = fmt.Fprintf(w, "PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
 		case SignalStop:
-			fmt.Fprintf(w, "PID %d got signal %s\n", record.PID, signalString(record.SignalStop.Signal))
+			_, _ = fmt.Fprintf(w, "PID %d got signal %s\n", record.PID, signalString(record.SignalStop.Signal))
 		case NewChild:
-			fmt.Fprintf(w, "PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
+			_, _ = fmt.Fprintf(w, "PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
 		}
 	}
 }

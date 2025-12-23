@@ -18,15 +18,16 @@ func PipeStdErr(ctx context.Context, from io.ReadCloser) {
 func pipe(ctx context.Context, from io.ReadCloser, to *os.File) {
 	go func() {
 		scanner := bufio.NewScanner(from)
+	forLoop:
 		for scanner.Scan() {
 			if scanner.Err() != nil {
-				break
+				break forLoop
 			}
 
 			select {
 			case <-ctx.Done():
-				from.Close()
-				break
+				_ = from.Close()
+				break forLoop
 			default:
 				_, _ = to.WriteString(scanner.Text()) // Print to parent's stdout
 				_, _ = to.WriteString("\n")

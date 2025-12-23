@@ -193,7 +193,8 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						runtime.Get().FileSystemAllowRead &&
 						!runtime.Get().FileSystemAllowWrite {
 						// Gate file open syscalls when only read access is allowed.
-						if name == "openat" {
+						switch name {
+						case "openat":
 							// openat(dirfd, pathname, flags, mode)
 							flags := int(rec.Syscall.Args[3].Uint())
 							writeAccMask := unix.O_WRONLY | unix.O_RDWR
@@ -203,7 +204,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							} else {
 								allow = false
 							}
-						} else if name == "open" {
+						case "open":
 							// open(pathname, flags, mode)
 							flags := int(rec.Syscall.Args[1].Uint())
 							writeAccMask := unix.O_WRONLY | unix.O_RDWR
@@ -213,7 +214,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							} else {
 								allow = false
 							}
-						} else if name == "openat2" {
+						case "openat2":
 							// openat2(dirfd, pathname, struct open_how *how, size_t size)
 							// Read open_how to examine flags
 							type openHow struct {
@@ -311,27 +312,26 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							fmt.Println("Syscall not allowed. However we don't have permission to kill")
 
 							// https://stackoverflow.com/a/6469069/13163094
-							if rec.Event == SyscallEnter {
+							switch rec.Event {
+							case SyscallEnter:
 								// Make sure the syscall is not valid anymore by changing the value that identifies it
 								rec.Syscall.Regs.Orig_rax = ^uint64(0)
 								rec.Syscall.Regs.Rax = ^uint64(0)
-
 								// In the context of seccomp, SIGSYS is the primary signal used to indicate a policy violation.
 								// When a seccomp filter is in place and a process attempts a disallowed system call, the kernel
 								// intercepts the call and sends SIGSYS to the process, preventing the system call from executing.
 								injectSignal = unix.SIGSYS
-							} else if rec.Event == SyscallExit {
+							case SyscallExit:
 								// Syscall Exit: The kernel sets register rax to the result of the syscall. This is typically 0 for success or -1 (represented as the maximum unsigned integer value) for an error.
 								rec.Syscall.Regs.Orig_rax = ^uint64(0)
 								rec.Syscall.Regs.Rax = ^uint64(0)
 								// Syscall Exit: If Rax indicates an error (-1), Rdx will typically contain the specific error code (the errno) explaining the reason for the failure.
 								rec.Syscall.Regs.Rdx = uint64(unix.EPERM) // Set errno
-
 								// In the context of seccomp, SIGSYS is the primary signal used to indicate a policy violation.
 								// When a seccomp filter is in place and a process attempts a disallowed system call, the kernel
 								// intercepts the call and sends SIGSYS to the process, preventing the system call from executing.
 								injectSignal = unix.SIGSYS
-							} else {
+							default:
 								// Don't send SIGKILL; let the process continue with the simulated error return
 								injectSignal = 0
 							}

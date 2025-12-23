@@ -75,12 +75,12 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 		go func() {
 			<-ctx.Done()
 			f, _ := os.Create("gk-syscalls-before-enforce.txt")
-			for k, _ := range syscallsBeforeEnforce {
+			for k := range syscallsBeforeEnforce {
 				_, _ = f.WriteString(k)
 				_, _ = f.WriteString("\n")
 			}
 			f, _ = os.Create("gk-syscalls-after-enforce.txt")
-			for k, _ := range syscallsAfterEnforce {
+			for k := range syscallsAfterEnforce {
 				_, _ = f.WriteString(k)
 				_, _ = f.WriteString("\n")
 			}
@@ -114,12 +114,12 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 				brkLoop := false
 				select {
 				case <-ctx.Done():
-					stdoutPipe.Close()
-					break
+					_ = stdoutPipe.Close()
+					brkLoop = true
 				default:
 					t := scanner.Text()
-					os.Stdout.WriteString(t)
-					os.Stdout.WriteString("\n")
+					_, _ = os.Stdout.WriteString(t)
+					_, _ = os.Stdout.WriteString("\n")
 
 					if strings.Contains(t, runtimeConfig.Get().TriggerEnforceLogMatch) {
 						println("Enabling gatekeeper now because log search string was detected.")

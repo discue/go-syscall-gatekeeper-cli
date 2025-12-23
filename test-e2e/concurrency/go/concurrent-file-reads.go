@@ -20,7 +20,7 @@ func main() {
 				fmt.Printf("Goroutine %d failed: %s\n", i+1, err) // Report individual failure
 				return
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			// ... process file ...
 

@@ -10,6 +10,33 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// cleanup helpers ensure defer cleanups check errors without failing tests
+type closer interface{ Close() error }
+
+func cleanupRemove(t *testing.T, path string) {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		t.Logf("cleanup remove %s: %v", path, err)
+	}
+}
+
+func cleanupRemoveAll(t *testing.T, path string) {
+	if err := os.RemoveAll(path); err != nil {
+		t.Logf("cleanup removeall %s: %v", path, err)
+	}
+}
+
+func cleanupClose(t *testing.T, c closer) {
+	if err := c.Close(); err != nil {
+		t.Logf("cleanup close: %v", err)
+	}
+}
+
+func cleanupUnixClose(t *testing.T, fd int) {
+	if err := unix.Close(fd); err != nil {
+		t.Logf("cleanup unix close fd %d: %v", fd, err)
+	}
+}
+
 func TestIsStdIn(t *testing.T) {
 	a := assert.New(t)
 	a.True(IsStdIn(int32(os.Stdin.Fd())))
@@ -57,7 +84,7 @@ func TestIsFile(t *testing.T) {
 	f, err := os.CreateTemp("", "test-file")
 	a.NoError(err)
 
-	defer os.Remove(f.Name())
+	defer cleanupRemove(t, f.Name())
 	a.True(IsFile(os.Getpid(), int32(f.Fd())))
 }
 
@@ -66,10 +93,10 @@ func TestIsDir(t *testing.T) {
 
 	dir, err := os.MkdirTemp("", "test-dir")
 	a.NoError(err)
-	defer os.RemoveAll(dir)
+	defer cleanupRemoveAll(t, dir)
 
 	f, _ := os.OpenFile(dir, os.O_RDONLY, 0)
-	defer f.Close()
+	defer cleanupClose(t, f)
 
 	a.True(IsDir(os.Getpid(), int32(f.Fd())))
 }
@@ -80,17 +107,17 @@ func TestIsSymlink(t *testing.T) {
 	// Create a temporary directory ensuring the path has no symlinks
 	tempDir, err := os.MkdirTemp("", "test-dir") // Use a consistent non-symlink path
 	a.NoError(err)
-	defer os.RemoveAll(tempDir)
+	defer cleanupRemoveAll(t, tempDir)
 
 	// Create a direct symlink
 	link := tempDir + "/test-link"
 	err = os.Symlink(tempDir, link) //  'dir' should be a simple direct path.
 	a.NoError(err)
-	defer os.Remove(link)
+	defer cleanupRemove(t, link)
 
 	fd, err := unix.Open(link, unix.O_PATH|unix.O_NOFOLLOW, 0)
 	a.NoError(err)
-	defer unix.Close(fd)
+	defer cleanupUnixClose(t, fd)
 	a.True(IsSymlink(os.Getpid(), int32(fd)))
 }
 
@@ -111,11 +138,11 @@ func TestIsSocket(t *testing.T) {
 
 	tcpConn, err := net.ListenTCP("tcp", &net.TCPAddr{})
 	a.NoError(err)
-	defer tcpConn.Close()
+	defer cleanupClose(t, tcpConn)
 
 	file, err := tcpConn.File() // Get the *os.File
 	a.NoError(err)
-	defer file.Close() // Important: Close the file to release resources
+	defer cleanupClose(t, file) // Important: Close the file to release resources
 
 	a.True(IsSocket(os.Getpid(), int32(file.Fd()))) // Now you can check the FD
 }
@@ -125,8 +152,8 @@ func TestIsPipe(t *testing.T) {
 
 	r, w, err := os.Pipe()
 	a.NoError(err)
-	defer r.Close()
-	defer w.Close()
+	defer cleanupClose(t, r)
+	defer cleanupClose(t, w)
 
 	a.True(IsPipe(os.Getpid(), int32(r.Fd())))
 	a.True(IsPipe(os.Getpid(), int32(w.Fd())))
@@ -136,7 +163,7 @@ func TestFdTypeFile(t *testing.T) {
 
 	f, err := os.CreateTemp("", "test-file")
 	a.NoError(err)
-	defer os.Remove(f.Name())
+	defer cleanupRemove(t, f.Name())
 	a.Equal(FDFile, FdType(os.Getpid(), int32(f.Fd())))
 }
 
@@ -145,10 +172,10 @@ func TestFdTypeDir(t *testing.T) {
 
 	dir, err := os.MkdirTemp("", "test-dir")
 	a.NoError(err)
-	defer os.RemoveAll(dir)
+	defer cleanupRemoveAll(t, dir)
 
 	f, _ := os.OpenFile(dir, os.O_RDONLY, 0)
-	defer f.Close()
+	defer cleanupClose(t, f)
 
 	a.Equal(FDDir, FdType(os.Getpid(), int32(f.Fd())))
 }
@@ -159,17 +186,17 @@ func TestFdTypeSymlink(t *testing.T) {
 	// Create a temporary directory ensuring the path has no symlinks
 	tempDir, err := os.MkdirTemp("", "test-dir") // Use a consistent non-symlink path
 	a.NoError(err)
-	defer os.RemoveAll(tempDir)
+	defer cleanupRemoveAll(t, tempDir)
 
 	// Create a direct symlink
 	link := tempDir + "/test-link"
 	err = os.Symlink(tempDir, link) //  'dir' should be a simple direct path.
 	a.NoError(err)
-	defer os.Remove(link)
+	defer cleanupRemove(t, link)
 
 	fd, err := unix.Open(link, unix.O_PATH|unix.O_NOFOLLOW, 0)
 	a.NoError(err)
-	defer unix.Close(fd)
+	defer cleanupUnixClose(t, fd)
 
 	a.Equal(FDSymlink, FdType(os.Getpid(), int32(fd)))
 }
@@ -179,11 +206,11 @@ func TestFdTypeSocket(t *testing.T) {
 
 	tcpConn, err := net.ListenTCP("tcp", &net.TCPAddr{})
 	a.NoError(err)
-	defer tcpConn.Close()
+	defer cleanupClose(t, tcpConn)
 
 	file, err := tcpConn.File()
 	a.NoError(err)
-	defer file.Close()
+	defer cleanupClose(t, file)
 
 	a.Equal(FDSocket, FdType(os.Getpid(), int32(file.Fd())))
 }
@@ -193,8 +220,8 @@ func TestFdTypePipe(t *testing.T) {
 
 	r, w, err := os.Pipe()
 	a.NoError(err)
-	defer r.Close()
-	defer w.Close()
+	defer cleanupClose(t, r)
+	defer cleanupClose(t, w)
 
 	a.Equal(FDPipe, FdType(os.Getpid(), int32(r.Fd())))
 	a.Equal(FDPipe, FdType(os.Getpid(), int32(w.Fd())))
@@ -212,7 +239,7 @@ func TestFdTypeAnonEvent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer unix.Close(fd)
+	defer cleanupUnixClose(t, fd)
 
 	fdType := FdType(os.Getpid(), int32(fd))
 	a.Equal(FDAnonEvent, fdType)
@@ -225,7 +252,7 @@ func TestFdTypeAnonEventPoll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer unix.Close(fd)
+	defer cleanupUnixClose(t, fd)
 
 	fdType := FdType(os.Getpid(), int32(fd))
 	a.Equal(FDAnonEventPoll, fdType)
@@ -236,7 +263,7 @@ func TestFdTypeAnonIoUring(t *testing.T) {
 
 	fd, err := iouring_syscall.IOURingSetup(1, &iouring_syscall.IOURingParams{})
 	a.NoError(err)
-	defer unix.Close(int(fd))
+	defer cleanupUnixClose(t, int(fd))
 
 	fdType := FdType(os.Getpid(), int32(fd))
 	a.Equal(FDAnonIoUring, fdType)

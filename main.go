@@ -118,13 +118,13 @@ func configureAndParseArgs() []string {
 		allowList.AllowAllFileSystemWriteAccess()
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
-		runtime.Get().FsConfig.FileSystemAllowRead = true
-		runtime.Get().FsConfig.FileSystemAllowWrite = true
+		runtime.Get().FileSystemAllowRead = true
+		runtime.Get().FileSystemAllowWrite = true
 	} else if *allowFileSystemReadAccess {
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
-		runtime.Get().FsConfig.FileSystemAllowRead = true
-		runtime.Get().FsConfig.FileSystemAllowWrite = false
+		runtime.Get().FileSystemAllowRead = true
+		runtime.Get().FileSystemAllowWrite = false
 	}
 
 	if *allowFileSystemPermissionsAccess {
@@ -226,11 +226,12 @@ func configureAndParseArgs() []string {
 		conf.SyscallsDenyTargetIfNotAllowed = false
 	}
 
-	if mode == "trace" {
+	switch mode {
+	case "trace":
 		conf.ExecutionMode = runtime.EXECUTION_MODE_TRACE
-	} else if mode == "run" {
+	case "run":
 		conf.ExecutionMode = runtime.EXECUTION_MODE_RUN
-	} else {
+	default:
 		runCmd.Usage()
 		exit(100)
 	}
