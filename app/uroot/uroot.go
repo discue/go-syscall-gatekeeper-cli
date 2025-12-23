@@ -57,7 +57,11 @@ type Task interface {
 func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Context, error) {
 	executable, err := exec.LookPath(bin)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to find executable %s: %w", bin, err)
+		cancelledContext, cancel := context.WithCancelCause(context.Background())
+		cancel(&ExitEventError{
+			ExitCode: 12,
+		})
+		return nil, cancelledContext, fmt.Errorf("unable to find executable %s: %w", bin, err)
 	}
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Env = getEnv(os.Getpid())
@@ -86,7 +90,11 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 	// setup goroutines to read and print stdout
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error creating stdout pipe: %w", err)
+		cancelledContext, cancel := context.WithCancelCause(context.Background())
+		cancel(&ExitEventError{
+			ExitCode: 13,
+		})
+		return nil, cancelledContext, fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
 	if runtimeConfig.Get().EnforceOnStartup {
@@ -145,7 +153,11 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 	// setup goroutines to read and print errout
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error creating stderr pipe: %w", err)
+		cancelledContext, cancel := context.WithCancelCause(context.Background())
+		cancel(&ExitEventError{
+			ExitCode: 14,
+		})
+		return nil, cancelledContext, fmt.Errorf("error creating stderr pipe: %w", err)
 	}
 	stdout.PipeStdErr(ctx, stderrPipe)
 
