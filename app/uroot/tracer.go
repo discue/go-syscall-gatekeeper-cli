@@ -236,78 +236,72 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 								}
 							}
 						}
-					} else if name == "write" || name == "writev" || name == "sendto" || name == "recvmsg" || name == "recvfrom" {
+					} else if name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
 						isStdStream := args.IsStandardStream(fd)
-						allow = isStdStream
+						allow = allow || isStdStream
 						println(fmt.Sprintf("Trying to %s to fd %d which is a standard stream %t", name, fd, allow))
 
 						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
-							isSocket := args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a socket %t", name, fd, isSocket))
-							allow = isSocket
+							allow = args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
 						}
 
-						if !allow && runtime.Get().FileSystemAllowWrite {
-							isFile := args.IsFile(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a file %t", name, fd, isFile))
-							allow = isFile
+						if !allow && runtime.Get().FileSystemAllowRead {
+							allow = args.IsFile(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a file %t", name, fd, allow))
 						}
 
 						if !allow {
-							isPipe := args.IsPipe(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a pipe %t", name, fd, isPipe))
-							allow = isPipe
+							allow = args.IsPipe(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a pipe %t", name, fd, allow))
 						}
 
-						if !allow {
-							isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
-							println(fmt.Sprintf("Trying to %s to fd %d which is a anon eventfd %t", name, fd, isEventFd))
-							allow = isEventFd
-						}
+						// {
+						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
+						// 	allow = allow || isEventFd
+						// }
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
-							println(fmt.Printf("Trying to write to fd %d which is of type %s\n", fd, fdType))
+							println(fmt.Sprintf("Trying to read from fd %d which is of type %s\n", fd, fdType))
 						}
 
-					} else if name == "read" || name == "readv" {
+					} else if name == "read" || name == "readv" || name == "recv" || name == "recvfrom" || name == "recvmsg" || name == "recvmmsg" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
 						isStdStream := args.IsStandardStream(fd)
-						allow = isStdStream
+						allow = allow || isStdStream
 
 						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
-							isSocket := args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a socket %t", name, fd, isSocket))
-							allow = isSocket
+							allow = args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
+							print(fmt.Sprintf("allow=%t\n", allow))
 						}
 
 						if !allow && runtime.Get().FileSystemAllowRead {
-							isFile := args.IsFile(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a file %t", name, fd, isFile))
-							// only allow writing to files
-							allow = isFile
+							allow = args.IsFile(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a file %t", name, fd, allow))
 						}
 
 						if !allow {
-							isPipe := args.IsPipe(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s to fd %d which is a pipe %t", name, fd, isPipe))
-							allow = isPipe
+							allow = args.IsPipe(p.pid, fd)
+							println(fmt.Sprintf("Trying to %s from fd %d which is a pipe %t", name, fd, allow))
 						}
 
-						if !allow {
-							isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
-							println(fmt.Sprintf("Trying to %s to fd %d which is a anon eventfd %t", name, fd, isEventFd))
-							allow = isEventFd
-						}
+						// if !allow {
+						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
+						// 	allow = allow || isEventFd
+						// }
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
-							println(fmt.Printf("Trying to write to fd %d which is of type %s\n", fd, fdType))
+							println(fmt.Sprintf("Trying to read from fd %d which is of type %s\n", fd, fdType))
 						}
 					}
 
