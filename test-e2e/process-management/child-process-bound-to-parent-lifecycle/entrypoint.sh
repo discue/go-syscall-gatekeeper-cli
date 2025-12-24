@@ -9,7 +9,7 @@ if [[ -z "${SERVER_PERMISSIONS:-}" ]]; then
 fi
 
 # Start the Node server under gatekeeper enforcement (run mode).
-/gatekeeper run ${SERVER_PERMISSIONS} -- node /server.cjs > /dev/null 2>&1 &
+/gatekeeper run ${SERVER_PERMISSIONS} -- node /server.cjs 1>/proc/1/fd/1 2>/proc/1/fd/2 &
 
 declare -r gatekeeper_pid=$!
 

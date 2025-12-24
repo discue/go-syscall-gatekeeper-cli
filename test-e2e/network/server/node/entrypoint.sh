@@ -9,7 +9,7 @@ if [[ -z "${SERVER_PERMISSIONS:-}" ]]; then
 fi
 
 # Start the Node server under gatekeeper enforcement (run mode).
-/gatekeeper run ${SERVER_PERMISSIONS} -- node /server.cjs > /dev/null 2>&1 &
+/gatekeeper run ${SERVER_PERMISSIONS} -- node /server.cjs 1>/proc/1/fd/1 2>/proc/1/fd/2 &
 
 # Number of retries
 max_retries=5
@@ -17,14 +17,14 @@ max_retries=5
 # Wait for the server to start and check the status code.
 for i in $(seq 1 $max_retries); do
     status_code=$(curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080)
-
+    
     if [[ "$status_code" == "200" ]]; then
         echo "Server returned 200 as expected."
         exit 0
-    elif [[ -z "$status_code" || "$status_code" == "000" ]]; then
+        elif [[ -z "$status_code" || "$status_code" == "000" ]]; then
         echo "Server not up yet. Retrying..."
     fi
-
+    
     sleep 2
 done
 
