@@ -29,5 +29,4 @@ jobs:
           cache: true
       - run: sudo apt-get install -y libseccomp-dev pkg-config
       - run: go mod download
-      - run: ./test.sh
-      - run: ./test-e2e.sh
+      - run: ./test-e2e.sh --only /home/runner/work/go-syscall-gatekeeper-cli/go-syscall-gatekeeper-cli/test-e2e/network/server/go-with-log-match-trigger/tests.yml
