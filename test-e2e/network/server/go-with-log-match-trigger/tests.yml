@@ -11,6 +11,7 @@
   configure_gatekeeper_entrypoint: false
   expect_failure: false
   permissions:
+    - --allow-file-system-read
     - --allow-network-server
 - describe: go server triggered by log matching with read filesystem permissions fails
   configure_gatekeeper_entrypoint: false
