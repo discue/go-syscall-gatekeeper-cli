@@ -189,6 +189,35 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 					allow := allowSyscall(name)
 
+					// Family-aware gating for socket/connect
+					if name == "socket" {
+						// socket(int domain, int type, int protocol)
+						domain := int(rec.Syscall.Args[0].Int())
+						// typeVal := int(rec.Syscall.Args[1].Int())
+						// protocol := int(rec.Syscall.Args[2].Int())
+
+						// Allow local-only families if enabled
+						if runtime.Get().LocalSocketsAllow && (domain == unix.AF_UNIX || domain == unix.AF_NETLINK) {
+							allow = true
+						} else if domain == unix.AF_INET || domain == unix.AF_INET6 || domain == unix.AF_PACKET {
+							// Require explicit network permissions
+							allow = allow || runtime.Get().NetworkAllowClient || runtime.Get().NetworkAllowServer
+						}
+					} else if name == "connect" {
+						// connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+						addr := rec.Syscall.Args[1].Pointer()
+						var family uint16
+						if addr != 0 {
+							if _, err := p.Read(addr, &family); err == nil {
+								if runtime.Get().LocalSocketsAllow && (family == uint16(unix.AF_UNIX) || family == uint16(unix.AF_NETLINK)) {
+									allow = true
+								} else if family == uint16(unix.AF_INET) || family == uint16(unix.AF_INET6) || family == uint16(unix.AF_PACKET) {
+									allow = allow || runtime.Get().NetworkAllowClient || runtime.Get().NetworkAllowServer
+								}
+							}
+						}
+					}
+
 					if (name == "openat" || name == "open" || name == "openat2") &&
 						runtime.Get().FileSystemAllowRead &&
 						!runtime.Get().FileSystemAllowWrite {
@@ -245,7 +274,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						allow = allow || isStdStream
 						println(fmt.Sprintf("Trying to %s to fd %d which is a standard stream %t", name, fd, allow))
 
-						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
+						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
 							allow = args.IsSocket(p.pid, fd)
 							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
 						}
@@ -278,7 +307,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						isStdStream := args.IsStandardStream(fd)
 						allow = allow || isStdStream
 
-						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient) {
+						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
 							allow = args.IsSocket(p.pid, fd)
 							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
 							print(fmt.Sprintf("allow=%t\n", allow))

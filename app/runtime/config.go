@@ -29,6 +29,7 @@ type FsConfig struct {
 type NetworkConfig struct {
 	NetworkAllowClient bool `split_words:"true" default:"false"`
 	NetworkAllowServer bool `split_words:"true" default:"false"`
+	LocalSocketsAllow  bool `split_words:"true" default:"false"`
 }
 
 type GatekeeperConfig struct {
