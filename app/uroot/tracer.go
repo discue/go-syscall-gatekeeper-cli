@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/discue/go-syscall-gatekeeper/app/runtime"
+	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls/args"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
@@ -189,33 +190,23 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 					allow := allowSyscall(name)
 
-					// Family-aware gating for socket/connect
+					// Family-aware gating for socket/connect via helpers
+					// Build unified syscall context for helpers
+					var sargs syscalls.SyscallArguments
+					for i := 0; i < len(sargs); i++ {
+						sargs[i] = syscalls.SyscallArgument{Value: rec.Syscall.Args[i].Value}
+					}
+					s := syscalls.Syscall{
+						Args:      sargs,
+						TraceePID: p.pid,
+						Reader: func(addr syscalls.Addr, v interface{}) (int, error) {
+							return p.Read(Addr(addr), v)
+						},
+					}
 					if name == "socket" {
-						// socket(int domain, int type, int protocol)
-						domain := int(rec.Syscall.Args[0].Int())
-						// typeVal := int(rec.Syscall.Args[1].Int())
-						// protocol := int(rec.Syscall.Args[2].Int())
-
-						// Allow local-only families if enabled
-						if runtime.Get().LocalSocketsAllow && (domain == unix.AF_UNIX || domain == unix.AF_NETLINK) {
-							allow = true
-						} else if domain == unix.AF_INET || domain == unix.AF_INET6 || domain == unix.AF_PACKET {
-							// Require explicit network permissions
-							allow = allow || runtime.Get().NetworkAllowClient || runtime.Get().NetworkAllowServer
-						}
+						allow = allow || syscalls.IsSocketAllowed(s)
 					} else if name == "connect" {
-						// connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
-						addr := rec.Syscall.Args[1].Pointer()
-						var family uint16
-						if addr != 0 {
-							if _, err := p.Read(addr, &family); err == nil {
-								if runtime.Get().LocalSocketsAllow && (family == uint16(unix.AF_UNIX) || family == uint16(unix.AF_NETLINK)) {
-									allow = true
-								} else if family == uint16(unix.AF_INET) || family == uint16(unix.AF_INET6) || family == uint16(unix.AF_PACKET) {
-									allow = allow || runtime.Get().NetworkAllowClient || runtime.Get().NetworkAllowServer
-								}
-							}
-						}
+						allow = allow || syscalls.IsConnectAllowed(s)
 					}
 
 					if (name == "openat" || name == "open" || name == "openat2") &&
@@ -224,70 +215,17 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						// Gate file open syscalls when only read access is allowed.
 						switch name {
 						case "openat":
-							// openat(dirfd, pathname, flags, mode)
-							flags := int(rec.Syscall.Args[3].Uint())
-							writeAccMask := unix.O_WRONLY | unix.O_RDWR
-							if flags&writeAccMask == 0 {
-								// Even with O_RDONLY, certain flags imply write intent
-								allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
-							} else {
-								allow = false
-							}
+							allow = syscalls.IsOpenAtReadOnly(s)
 						case "open":
-							// open(pathname, flags, mode)
-							flags := int(rec.Syscall.Args[1].Uint())
-							writeAccMask := unix.O_WRONLY | unix.O_RDWR
-							if flags&writeAccMask == 0 {
-								// Even with O_RDONLY, certain flags imply write intent
-								allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
-							} else {
-								allow = false
-							}
+							allow = syscalls.IsOpenReadOnly(s)
 						case "openat2":
-							// openat2(dirfd, pathname, struct open_how *how, size_t size)
-							// Read open_how to examine flags
-							type openHow struct {
-								Flags   uint64
-								Mode    uint64
-								Resolve uint64
-							}
-							addr := rec.Syscall.Args[2].Pointer()
-							var how openHow
-							if _, err := p.Read(addr, &how); err != nil {
-								fmt.Printf("Unable to read open_how for openat2: %s\n", err.Error())
-								allow = false
-							} else {
-								flags := int(how.Flags)
-								writeAccMask := unix.O_WRONLY | unix.O_RDWR
-								if flags&writeAccMask == 0 {
-									allow = (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
-								} else {
-									allow = false
-								}
-							}
+							allow = syscalls.IsOpenAt2ReadOnly(s)
 						}
 					} else if name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						isStdStream := args.IsStandardStream(fd)
-						allow = allow || isStdStream
-						println(fmt.Sprintf("Trying to %s to fd %d which is a standard stream %t", name, fd, allow))
-
-						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
-							allow = args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
-						}
-
-						if !allow && runtime.Get().FileSystemAllowRead {
-							allow = args.IsFile(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a file %t", name, fd, allow))
-						}
-
-						if !allow {
-							allow = args.IsPipe(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a pipe %t", name, fd, allow))
-						}
+						allow = allow || syscalls.IsWriteAllowed(s)
 
 						// {
 						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
@@ -297,31 +235,14 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
-							println(fmt.Sprintf("Trying to read from fd %d which is of type %s\n", fd, fdType))
+							println(fmt.Sprintf("Trying to write to fd %d which is of type %s", fd, fdType))
 						}
 
 					} else if name == "read" || name == "readv" || name == "recv" || name == "recvfrom" || name == "recvmsg" || name == "recvmmsg" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						isStdStream := args.IsStandardStream(fd)
-						allow = allow || isStdStream
-
-						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
-							allow = args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a socket %t", name, fd, allow))
-							print(fmt.Sprintf("allow=%t\n", allow))
-						}
-
-						if !allow && runtime.Get().FileSystemAllowRead {
-							allow = args.IsFile(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a file %t", name, fd, allow))
-						}
-
-						if !allow {
-							allow = args.IsPipe(p.pid, fd)
-							println(fmt.Sprintf("Trying to %s from fd %d which is a pipe %t", name, fd, allow))
-						}
+						allow = allow || syscalls.IsReadAllowed(s)
 
 						// if !allow {
 						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
@@ -331,24 +252,14 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
-							println(fmt.Sprintf("Trying to read from fd %d which is of type %s\n", fd, fdType))
+							println(fmt.Sprintf("Trying to read from fd %d which is of type %s", fd, fdType))
 						}
 					} else if name == "shutdown" {
 						// shutdown(int sockfd, int how)
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						// Allow graceful close for sockets when local or network sockets are enabled
-						if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow {
-							allow = args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to shutdown fd %d which is a socket %t", fd, allow))
-						}
-
-						// Always allow shutdown on standard streams to be conservative (rare but safe)
-						if !allow {
-							isStdStream := args.IsStandardStream(fd)
-							allow = allow || isStdStream
-						}
+						allow = allow || syscalls.IsShutdownAllowed(s)
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
@@ -360,27 +271,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						// Always allow closing standard streams
-						isStdStream := args.IsStandardStream(fd)
-						allow = allow || isStdStream
-
-						// Allow closing sockets if any socket capability is enabled
-						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
-							allow = args.IsSocket(p.pid, fd)
-							println(fmt.Sprintf("Trying to close fd %d which is a socket %t", fd, allow))
-						}
-
-						// Allow closing files if file read is enabled (closing is harmless)
-						if !allow && runtime.Get().FileSystemAllowRead {
-							allow = args.IsFile(p.pid, fd)
-							println(fmt.Sprintf("Trying to close fd %d which is a file %t", fd, allow))
-						}
-
-						// Pipes/FIFOs
-						if !allow {
-							allow = args.IsPipe(p.pid, fd)
-							println(fmt.Sprintf("Trying to close fd %d which is a pipe %t", fd, allow))
-						}
+						allow = allow || syscalls.IsCloseAllowed(s)
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
