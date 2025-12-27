@@ -333,6 +333,60 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							fdType := args.FdType(p.pid, fd)
 							println(fmt.Sprintf("Trying to read from fd %d which is of type %s\n", fd, fdType))
 						}
+					} else if name == "shutdown" {
+						// shutdown(int sockfd, int how)
+						syscallArgs := rec.Syscall.Args
+						fd := syscallArgs[0].Int()
+
+						// Allow graceful close for sockets when local or network sockets are enabled
+						if runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow {
+							allow = args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to shutdown fd %d which is a socket %t", fd, allow))
+						}
+
+						// Always allow shutdown on standard streams to be conservative (rare but safe)
+						if !allow {
+							isStdStream := args.IsStandardStream(fd)
+							allow = allow || isStdStream
+						}
+
+						if !allow {
+							fdType := args.FdType(p.pid, fd)
+							println(fmt.Sprintf("Trying to shutdown fd %d which is of type %s", fd, fdType))
+						}
+
+					} else if name == "close" {
+						// close(int fd)
+						syscallArgs := rec.Syscall.Args
+						fd := syscallArgs[0].Int()
+
+						// Always allow closing standard streams
+						isStdStream := args.IsStandardStream(fd)
+						allow = allow || isStdStream
+
+						// Allow closing sockets if any socket capability is enabled
+						if !allow && (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) {
+							allow = args.IsSocket(p.pid, fd)
+							println(fmt.Sprintf("Trying to close fd %d which is a socket %t", fd, allow))
+						}
+
+						// Allow closing files if file read is enabled (closing is harmless)
+						if !allow && runtime.Get().FileSystemAllowRead {
+							allow = args.IsFile(p.pid, fd)
+							println(fmt.Sprintf("Trying to close fd %d which is a file %t", fd, allow))
+						}
+
+						// Pipes/FIFOs
+						if !allow {
+							allow = args.IsPipe(p.pid, fd)
+							println(fmt.Sprintf("Trying to close fd %d which is a pipe %t", fd, allow))
+						}
+
+						if !allow {
+							fdType := args.FdType(p.pid, fd)
+							println(fmt.Sprintf("Trying to close fd %d which is of type %s", fd, fdType))
+						}
+
 					}
 
 					if !allow {
