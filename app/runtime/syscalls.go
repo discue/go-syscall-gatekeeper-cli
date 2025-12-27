@@ -71,6 +71,12 @@ func (sal *SyscallAllowList) AllowNetworkServer() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["Networking Server"]...)
 }
 
+func (sal *SyscallAllowList) AllowLocalSockets() {
+	// Minimal client-side local socket operations (AF_UNIX/AF_NETLINK) controlled by tracer
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Basic File Descriptor Operations"]...)
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Local Sockets Client"]...)
+}
+
 func (sal *SyscallAllowList) AllowMemoryManagement() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["Memory Management"]...)
 }
@@ -82,6 +88,10 @@ func (sal *SyscallAllowList) AllowSignals() {
 
 func (sal *SyscallAllowList) AllowTimersAndClocksManagement() {
 	sal.Syscalls = append(sal.Syscalls, syscallMap["Timers and Clocks"]...)
+}
+
+func (sal *SyscallAllowList) AllowBasicTime() {
+	sal.Syscalls = append(sal.Syscalls, syscallMap["Basic Time"]...)
 }
 
 func (sal *SyscallAllowList) AllowSecurityAndPermissions() {

@@ -4,6 +4,17 @@ package runtime
 // This allows granting write IO (write*, pwrite*, fallocate) without implicitly enabling
 // file creation, renames, or unlinking unless desired. Tracer logic further gates intent.
 var syscallMap = map[string][]string{
+	// Conservative default: allow time queries and sleeping, but exclude
+	// system clock adjustments and advanced timer facilities by default.
+	"Basic Time": []string{
+		"clock_gettime",
+		"clock_getres",
+		"gettimeofday",
+		"time",
+		"times",
+		"nanosleep",
+		"clock_nanosleep",
+	},
 	"File Read Operations": []string{
 		"access",
 		"faccessat",
@@ -11,6 +22,13 @@ var syscallMap = map[string][]string{
 		"fadvise64",
 		"fstat",
 		"fstatfs",
+		// Extended attribute reads (metadata-only)
+		"getxattr",
+		"fgetxattr",
+		"lgetxattr",
+		"listxattr",
+		"flistxattr",
+		"llistxattr",
 		"getdents",
 		"getdents64",
 		"lseek",
@@ -31,6 +49,8 @@ var syscallMap = map[string][]string{
 	"File Write Operations": []string{
 		"copy_file_range",
 		"fallocate",
+		"fdatasync",
+		"fsync",
 		"sync_file_range",
 		"write",
 		"writev",
@@ -45,6 +65,7 @@ var syscallMap = map[string][]string{
 	// File creation and metadata-changing operations (ownership, links, renames, times, size).
 	"File Create/Metadata": []string{
 		"creat",
+		"ftruncate",
 		"truncate",
 		"rename",
 		"renameat",
@@ -146,7 +167,7 @@ var syscallMap = map[string][]string{
 		"accept",
 		"accept4",
 		"bind",
-		"connect",
+		// "connect",
 		"getpeername",
 		"getsockname",
 		"getsockopt",
@@ -157,6 +178,11 @@ var syscallMap = map[string][]string{
 		"setsockopt",
 		"shutdown",
 		"socket",
+	},
+	"Local Sockets Client": []string{
+		"socket",
+		"connect",
+		"shutdown",
 	},
 	"Basic File Descriptor Operations": []string{
 		"close",
@@ -250,16 +276,12 @@ var syscallMap = map[string][]string{
 		"chdir",
 		"capget",
 		"capset",
-		"getxattr",
-		"fgetxattr",
-		"lgetxattr",
 		"setxattr",
 		"fsetxattr",
 		"lsetxattr",
 		"lremovexattr",
 		"removexattr",
 		"fremovexattr",
-		"listxattr",
 		"setuid",
 		"setgid",
 		"seteuid",
@@ -281,6 +303,7 @@ var syscallMap = map[string][]string{
 		"uname",
 		"sysinfo",
 		"getrlimit",
+		"getrusage",
 		"setrlimit",
 		"ugetrlimit",
 	},
