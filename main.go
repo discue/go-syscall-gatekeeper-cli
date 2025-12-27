@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/discue/go-syscall-gatekeeper/app/runtime"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot"
+	"github.com/discue/go-syscall-gatekeeper/cli"
 )
 
 var osExit = os.Exit // Assign exit to a variable to allow mocking in unit tests
@@ -20,28 +20,7 @@ func exit(code int) {
 	osExit(code)
 }
 
-type syscallDeniedAction string
-
-const (
-	KillAction  syscallDeniedAction = "kill"
-	ErrorAction syscallDeniedAction = "error"
-)
-
-func (s *syscallDeniedAction) String() string {
-	return string(*s)
-}
-
-func (s *syscallDeniedAction) Set(value string) error {
-	switch value {
-	case "kill":
-		*s = KillAction
-	case "error":
-		*s = ErrorAction
-	default:
-		return fmt.Errorf("invalid value for on-syscall-denied: %s.  Must be 'kill' or 'error'", value)
-	}
-	return nil
-}
+// CLI flag type and constants moved to cli package.
 
 func main() {
 	mainCtx, cancel := context.WithCancel(context.Background())
@@ -68,137 +47,131 @@ func startTracee(c context.Context) context.Context {
 func configureAndParseArgs() []string {
 	conf := runtime.Get()
 
-	runCmd := flag.NewFlagSet("mode", flag.ExitOnError)
-	triggerEnforceOnLogMatch := runCmd.String("trigger-enforce-on-log-match", "", "Enable enforcement when trace output contains this string (use with --no-enforce-on-startup)")
-	triggerEnforceOnSignal := runCmd.String("trigger-enforce-on-signal", "", "Enable enforcement upon receiving this signal (name or number, use with --no-enforce-on-startup)")
-	verbose := runCmd.Bool("verbose", false, "Enable verbose decision logging from the tracer")
-
-	// permissions
-	allowFileSystemReadAccess := runCmd.Bool("allow-file-system-read", false, "Allow read-only filesystem access (open O_RDONLY, read, stat, list)")
-	allowFileSystemWriteAccess := runCmd.Bool("allow-file-system-write", false, "Allow modifying the filesystem (create, write, rename, unlink, truncate)")
-	allowFileSystemAccess := runCmd.Bool("allow-file-system", false, "Alias for --allow-file-system-write (full read/write filesystem access)")
-	allowFileSystemPermissionsAccess := runCmd.Bool("allow-file-system-permissions", false, "Allow changing file ownership and permissions (chmod/chown/fchmod/fchown*)")
-
-	allowNetworkClient := runCmd.Bool("allow-network-client", false, "Allow outbound network connections (socket/connect/send/recv)")
-	allowNetworkServer := runCmd.Bool("allow-network-server", false, "Allow listening sockets and incoming connections (socket/bind/listen/accept)")
-	allowProcessManagement := runCmd.Bool("allow-process-management", false, "Allow process/thread creation and lifecycle control (exec/fork/clone/wait)")
-	allowNetworking := runCmd.Bool("allow-networking", false, "Allow both client and server networking capabilities")
-	allowMemoryManagement := runCmd.Bool("allow-memory-management", false, "Allow memory mapping and related syscalls (mmap/mprotect/mremap/brk)")
-	allowSignals := runCmd.Bool("allow-signals", false, "Allow setting and handling signals (rt_sig*, sigaltstack)")
-	allowTimersAndClocksManagement := runCmd.Bool("allow-timers-and-clocks-management", false, "Allow timers and clock syscalls (clock_gettime, timerfd_*, nanosleep)")
-	allowSecurityAndPermissions := runCmd.Bool("allow-security-and-permissions", false, "Allow identity/capability changes and seccomp (setuid/setgid/capset/seccomp). Risky; enable only if needed.")
-	allowSystemInformation := runCmd.Bool("allow-system-information", false, "Allow system information and rlimit operations (uname/sysinfo/getrlimit/setrlimit)")
-	allowProcessCommunication := runCmd.Bool("allow-process-communication", false, "Allow IPC mechanisms (SysV shared memory, semaphores, message queues, POSIX mqueue)")
-	allowProcessSynchronization := runCmd.Bool("allow-process-synchronization", false, "Allow synchronization primitives (futex/flock/robust list)")
-	allowMisc := runCmd.Bool("allow-misc", false, "Allow miscellaneous syscalls (includes ioctl, splice, vmsplice). Risky; enable only if required.")
-	noEnforceOnStart := runCmd.Bool("no-enforce-on-startup", false, "Start without enforcement; enable later via a trigger flag")
-	noImplicitAllow := runCmd.Bool("no-implicit-allow", false, "Disable baseline implicit permissions; only allow what is explicitly specified")
-	var action syscallDeniedAction // Custom flag variable
-	runCmd.Var(&action, "on-syscall-denied", "Action when a syscall is denied: 'kill' (SIGKILL) or 'error' (simulate EPERM via SIGSYS)")
+	c := cli.NewCommand()
 
 	if len(os.Args) < 3 {
 		fmt.Println("Error: You did not provide enough parameters and flags.")
-		runCmd.Usage()
+		c.Usage()
 		exit(100)
 	}
 
 	mode := os.Args[1]
 
-	// parse flags now
-	err := runCmd.Parse(os.Args[2:])
+	// Pre-scan for dynamic syscall allow flags and filter them out before parsing
+	// Supported forms:
+	//  - --allow-syscall-<name>
+	//  - --allow-syscall=<name>
+	rawArgs := os.Args[2:]
+	filteredArgs, dynamicSyscalls := c.PreScanDynamicSyscalls(rawArgs)
+
+	// parse known flags now
+	err := c.Parse(filteredArgs)
 	if err != nil {
 		fmt.Println(err.Error())
-		runCmd.Usage()
+		c.Usage()
 		exit(100)
 	}
 
 	allowList := runtime.NewSyscallAllowList()
 
-	if *allowFileSystemWriteAccess || *allowFileSystemAccess {
+	if *c.AllowFileSystemWriteAccess || *c.AllowFileSystemAccess {
 		allowList.AllowAllFileSystemWriteAccess()
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
 		runtime.Get().FileSystemAllowRead = true
 		runtime.Get().FileSystemAllowWrite = true
-	} else if *allowFileSystemReadAccess {
+	} else if *c.AllowFileSystemReadAccess {
 		allowList.AllowAllFileSystemReadAccess()
 		allowList.AllowAllFileDescriptors()
 		runtime.Get().FileSystemAllowRead = true
 		runtime.Get().FileSystemAllowWrite = false
 	}
 
-	if *allowFileSystemPermissionsAccess {
+	if *c.AllowFileSystemPermissionsAccess {
 		allowList.AllowAllFilePermissions()
 	}
 
-	if *allowProcessManagement {
+	if *c.AllowProcessManagement {
 		allowList.AllowProcessManagement()
 	}
 
-	if *allowNetworkClient {
+	if *c.AllowNetworkClient {
 		allowList.AllowNetworkClient()
 		allowList.AllowAllFileDescriptors()
 		conf.NetworkAllowClient = true
 	}
 
-	if *allowNetworkServer {
+	if *c.AllowNetworkServer {
 		allowList.AllowNetworkServer()
 		allowList.AllowAllFileDescriptors()
 		conf.NetworkAllowServer = true
 	}
 
-	if *allowNetworking {
+	if *c.AllowLocalSockets {
+		allowList.AllowLocalSockets()
+		// allowList.AllowAllFileDescriptors()
+		conf.LocalSocketsAllow = true
+	}
+
+	if *c.AllowNetworking {
 		allowList.AllowNetworking()
 	}
 
-	if *allowMemoryManagement {
+	if *c.AllowMemoryManagement {
 		allowList.AllowMemoryManagement()
 	}
 
-	if *allowSignals {
+	if *c.AllowSignals {
 		allowList.AllowSignals()
 	}
 
-	if *allowTimersAndClocksManagement {
+	if *c.AllowTimersAndClocksManagement {
 		allowList.AllowTimersAndClocksManagement()
 	}
 
-	if *allowSecurityAndPermissions {
+	if *c.AllowSecurityAndPermissions {
 		allowList.AllowSecurityAndPermissions()
 	}
 
-	if *allowSystemInformation {
+	if *c.AllowSystemInformation {
 		allowList.AllowSystemInformation()
 	}
 
-	if *allowProcessCommunication {
+	if *c.AllowProcessCommunication {
 		allowList.AllowProcessCommunication()
 	}
 
-	if *allowProcessSynchronization {
+	if *c.AllowProcessSynchronization {
 		allowList.AllowProcessSynchronization()
 	}
 
-	if *allowMisc {
+	if *c.AllowMisc {
 		allowList.AllowMisc()
 	}
 
-	if !*noImplicitAllow {
+	// Append dynamically allowed syscalls collected from CLI
+	if len(dynamicSyscalls) > 0 {
+		allowList.Syscalls = append(allowList.Syscalls, dynamicSyscalls...)
+	}
+
+	if !*c.NoImplicitAllow {
 		allowList.AllowProcessManagement()
 		allowList.AllowMemoryManagement()
 		allowList.AllowProcessSynchronization()
 		allowList.AllowSignals()
+		// Basic time queries and sleep are broadly required and safe
+		allowList.AllowBasicTime()
 		allowList.AllowMisc()
 		allowList.AllowSecurityAndPermissions()
 		allowList.AllowSystemInformation()
 	}
 
-	conf.VerboseLog = *verbose
+	conf.VerboseLog = *c.Verbose
 
-	if *noEnforceOnStart {
-		if *triggerEnforceOnLogMatch == "" && *triggerEnforceOnSignal == "" {
+	if *c.NoEnforceOnStart {
+		if *c.TriggerEnforceOnLogMatch == "" && *c.TriggerEnforceOnSignal == "" {
 			fmt.Println("Error: To delay the enforcement of seccomp policies, please also specify either --trigger-enforce-on-log-match or --trigger-enforce-on-signal.")
-			runCmd.Usage()
+			c.Usage()
 			exit(100)
 		} else {
 			conf.EnforceOnStartup = false
@@ -207,10 +180,10 @@ func configureAndParseArgs() []string {
 		conf.EnforceOnStartup = true
 	}
 
-	if *triggerEnforceOnLogMatch != "" {
-		conf.TriggerEnforceLogMatch = *triggerEnforceOnLogMatch
-	} else if *triggerEnforceOnSignal != "" {
-		conf.TriggerEnforceSignal = *triggerEnforceOnSignal
+	if *c.TriggerEnforceOnLogMatch != "" {
+		conf.TriggerEnforceLogMatch = *c.TriggerEnforceOnLogMatch
+	} else if *c.TriggerEnforceOnSignal != "" {
+		conf.TriggerEnforceSignal = *c.TriggerEnforceOnSignal
 	}
 
 	if len(allowList.Syscalls) > 0 {
@@ -218,7 +191,7 @@ func configureAndParseArgs() []string {
 		conf.SyscallsAllowMap = runtime.CreateSyscallAllowMap(conf.SyscallsAllowList)
 	}
 
-	if action == ErrorAction {
+	if c.Action == cli.ErrorAction {
 		conf.SyscallsKillTargetIfNotAllowed = false
 		conf.SyscallsDenyTargetIfNotAllowed = true
 	} else {
@@ -232,11 +205,11 @@ func configureAndParseArgs() []string {
 	case "run":
 		conf.ExecutionMode = runtime.EXECUTION_MODE_RUN
 	default:
-		runCmd.Usage()
+		c.Usage()
 		exit(100)
 	}
 
-	return runCmd.Args()
+	return c.Args()
 }
 
 func waitForShutdown(cancel context.CancelFunc, tracee context.Context) {
