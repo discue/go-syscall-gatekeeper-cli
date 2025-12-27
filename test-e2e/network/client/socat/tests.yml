@@ -1,0 +1,21 @@
+- describe: socat with default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: socat with network client permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-network-client
+    - --allow-file-system-read
+- describe: socat with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+    - --allow-file-system-read
+- describe: socat with read filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: socat with write filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write

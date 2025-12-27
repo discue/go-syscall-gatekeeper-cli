@@ -1,0 +1,21 @@
+- describe: ls directory listing default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: ls directory listing with network client permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: ls directory listing with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: ls directory listing with read-only filesystem permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-local-sockets
+    - --allow-file-system-read
+- describe: ls directory listing with write-only filesystem permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-local-sockets
+    - --allow-file-system-write

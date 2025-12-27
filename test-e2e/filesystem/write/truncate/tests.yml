@@ -1,0 +1,19 @@
+- describe: truncate with default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: truncate with network client permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: truncate with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: truncate with read filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: truncate with write filesystem permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write

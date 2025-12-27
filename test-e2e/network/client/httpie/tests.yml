@@ -1,0 +1,20 @@
+- describe: httpie with default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: httpie with network client permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-network-client
+    - --allow-file-system-read
+- describe: httpie with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: httpie with read filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: httpie with write filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write
