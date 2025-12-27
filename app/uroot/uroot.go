@@ -25,6 +25,7 @@ import (
 
 	runtimeConfig "github.com/discue/go-syscall-gatekeeper/app/runtime"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot/stdout"
+	"github.com/discue/go-syscall-gatekeeper/app/utils"
 
 	"golang.org/x/sys/unix"
 )
@@ -114,7 +115,7 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 				brkLoop := false
 				select {
 				case <-ctx.Done():
-					_ = stdoutPipe.Close()
+					utils.SafeClose(stdoutPipe, "stdout pipe (trigger-enforce log match)")
 					brkLoop = true
 				default:
 					t := scanner.Text()

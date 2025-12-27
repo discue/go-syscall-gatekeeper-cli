@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 	"os"
+
+	"github.com/discue/go-syscall-gatekeeper/app/utils"
 )
 
 func PipeStdOut(ctx context.Context, from io.ReadCloser) {
@@ -26,7 +28,7 @@ func pipe(ctx context.Context, from io.ReadCloser, to *os.File) {
 
 			select {
 			case <-ctx.Done():
-				_ = from.Close()
+				utils.SafeClose(from, "stdout/stderr pipe reader")
 				break forLoop
 			default:
 				_, _ = to.WriteString(scanner.Text()) // Print to parent's stdout
