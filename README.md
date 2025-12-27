@@ -95,6 +95,15 @@ You can pass the following flags:
 - `--allow-network-client` to allow the started process to open sockets and open connections to other servers,
 - `--allow-network-server` to allow the started process to listen on ports and accept incoming connections.
 
+## Baseline
+By default (unless you pass `--no-implicit-allow`), gatekeeper enables a safe baseline including process management, memory, synchronization, signals, basic time queries and sleep (`clock_gettime`, `gettimeofday`, `nanosleep`), miscellaneous, security, and system information. This avoids breaking common applications that need time functions without requiring extra flags. Use `--allow-timers-and-clocks-management` for the full timers/clock set (e.g., `timerfd_*`, `setitimer`), or keep the default minimal set for tighter policies.
+
+#### Dynamically allow individual syscalls
+In addition to grouped permissions, you can enable specific syscalls directly from the CLI without modifying configuration files. This is useful for targeted exceptions.
+
+- `--allow-syscall-<name>`: allow a single syscall by name.
+- `--allow-syscall=<name>`: equivalent form using `=`.
+
 ### 🔎 Trace
 The `trace` subcommand run the given binary and traces the syscalls. In this case, the `gatekeeper` will 
 
