@@ -6,7 +6,7 @@ package runtime
 var syscallMap = map[string][]string{
 	// Conservative default: allow time queries and sleeping, but exclude
 	// system clock adjustments and advanced timer facilities by default.
-	"Basic Time": []string{
+	"Basic Time": {
 		"clock_gettime",
 		"clock_getres",
 		"gettimeofday",
@@ -15,7 +15,7 @@ var syscallMap = map[string][]string{
 		"nanosleep",
 		"clock_nanosleep",
 	},
-	"File Read Operations": []string{
+	"File Read Operations": {
 		"access",
 		"faccessat",
 		"faccessat2",
@@ -46,7 +46,7 @@ var syscallMap = map[string][]string{
 		"statx",
 	},
 	// Raw IO write operations (data writes or allocation hints), separated from metadata ops.
-	"File Write Operations": []string{
+	"File Write Operations": {
 		"copy_file_range",
 		"fallocate",
 		"fdatasync",
@@ -57,13 +57,13 @@ var syscallMap = map[string][]string{
 		"pwrite64",
 		"pwritev",
 	},
-	"File Open": []string{
+	"File Open": {
 		"open",
 		"openat",
 		"openat2",
 	},
 	// File creation and metadata-changing operations (ownership, links, renames, times, size).
-	"File Create/Metadata": []string{
+	"File Create/Metadata": {
 		"creat",
 		"ftruncate",
 		"truncate",
@@ -87,7 +87,7 @@ var syscallMap = map[string][]string{
 		"utimes",
 		"futimesat",
 	},
-	"File Permissions": []string{
+	"File Permissions": {
 		"chmod",
 		"chown",
 		"fchmod",
@@ -95,7 +95,7 @@ var syscallMap = map[string][]string{
 		"fchown",
 		"fchownat",
 	},
-	"Process Management": []string{
+	"Process Management": {
 		"arch_prctl",
 		"alarm",
 		"clone",
@@ -144,7 +144,7 @@ var syscallMap = map[string][]string{
 		"pidfd_send_signal",
 		"set_tid_address",
 	},
-	"Networking Client": []string{
+	"Networking Client": {
 		"bind",
 		"connect",
 		"getpeername",
@@ -163,7 +163,7 @@ var syscallMap = map[string][]string{
 		"shutdown",
 		"socket",
 	},
-	"Networking Server": []string{
+	"Networking Server": {
 		"accept",
 		"accept4",
 		"bind",
@@ -179,12 +179,12 @@ var syscallMap = map[string][]string{
 		"shutdown",
 		"socket",
 	},
-	"Local Sockets Client": []string{
+	"Local Sockets Client": {
 		"socket",
 		"connect",
 		"shutdown",
 	},
-	"Basic File Descriptor Operations": []string{
+	"Basic File Descriptor Operations": {
 		"close",
 		"close_range",
 		"read",   // generic read on any file descriptor (files, sockets, pipes)
@@ -192,7 +192,7 @@ var syscallMap = map[string][]string{
 		"write",  // generic write on any file descriptor (files, sockets, pipes)
 		"writev", // vectored write on any file descriptor
 	},
-	"File Descriptor Operations": []string{
+	"File Descriptor Operations": {
 		"dup",           // duplicate an existing file descriptor
 		"dup2",          // duplicate an existing file descriptor
 		"dup3",          // duplicate an existing file descriptor
@@ -215,7 +215,7 @@ var syscallMap = map[string][]string{
 		"pipe",
 		"pipe2",
 	},
-	"Memory Management": []string{
+	"Memory Management": {
 		"brk",
 		"madvise",
 		"map_shadow_stack",
@@ -237,7 +237,7 @@ var syscallMap = map[string][]string{
 		"pkey_free",
 		"pkey_mprotect",
 	},
-	"Signals": []string{
+	"Signals": {
 		"rt_sigaction",
 		"rt_sigpending",
 		"rt_sigprocmask",
@@ -251,7 +251,7 @@ var syscallMap = map[string][]string{
 		"sigprocmask",
 		"sigreturn",
 	},
-	"Timers and Clocks": []string{
+	"Timers and Clocks": {
 		"adjtimex",
 		"alarm",
 		"clock_adjtime",
@@ -272,7 +272,7 @@ var syscallMap = map[string][]string{
 		"timerfd_settime",
 		"times",
 	},
-	"Security and Permissions": []string{
+	"Security and Permissions": {
 		"chdir",
 		"capget",
 		"capset",
@@ -298,7 +298,7 @@ var syscallMap = map[string][]string{
 		"getgroups",
 		"seccomp",
 	},
-	"System Information": []string{
+	"System Information": {
 		// "getcpu",
 		"uname",
 		"sysinfo",
@@ -307,7 +307,7 @@ var syscallMap = map[string][]string{
 		"setrlimit",
 		"ugetrlimit",
 	},
-	"IPC": []string{
+	"IPC": {
 		"semctl",
 		"semget",
 		"semop",
@@ -328,7 +328,7 @@ var syscallMap = map[string][]string{
 		"mq_timedsend",
 		"mq_unlink",
 	},
-	"Synchronization": []string{
+	"Synchronization": {
 		"futex",
 		"futex_wait",
 		"futex_wake",
@@ -336,7 +336,7 @@ var syscallMap = map[string][]string{
 		"get_robust_list",
 		"flock",
 	},
-	"Miscellaneous": []string{
+	"Miscellaneous": {
 		"landlock_add_rule",
 		"landlock_create_ruleset",
 		"landlock_restrict_self",
