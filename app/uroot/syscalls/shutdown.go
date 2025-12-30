@@ -15,9 +15,5 @@ func IsShutdownAllowed(s Syscall, isEnter bool) bool {
 	if (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) && isSocket {
 		return true
 	}
-	isStdStream := args.IsStandardStream(fd)
-	if isStdStream {
-		return true
-	}
-	return false
+	return args.IsStandardStream(fd)
 }
