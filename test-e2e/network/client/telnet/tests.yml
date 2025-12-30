@@ -6,11 +6,14 @@
   permissions:
     - --allow-network-client
     - --allow-file-system-read
+    - --allow-syscall-umask
+    - --allow-local-sockets
 - describe: telnet with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
     - --allow-file-system-read
+    - --allow-local-sockets
 - describe: telnet with read filesystem permissions fails
   expect_failure: true
   permissions:

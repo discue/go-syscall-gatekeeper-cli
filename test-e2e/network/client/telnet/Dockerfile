@@ -9,4 +9,4 @@ RUN apt-get update \
 
 # Connect to an IPv4 address to avoid DNS/FS-read dependency
 # Send a minimal HTTP/1.0 request and print the first response line
-CMD ["bash", "-lc", "printf 'GET / HTTP/1.0\r\n\r\n' | telnet 1.1.1.1 80 | sed -n '1p'"]
+CMD ["bash", "-lc", "printf 'GET / HTTP/1.0\r\n\r\n' | telnet 1.1.1.1 80"]

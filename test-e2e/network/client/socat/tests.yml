@@ -6,11 +6,15 @@
   permissions:
     - --allow-network-client
     - --allow-file-system-read
+    - --allow-local-sockets
+    - --allow-process-communication
 - describe: socat with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
     - --allow-file-system-read
+    - --allow-local-sockets
+    - --allow-process-communication
 - describe: socat with read filesystem permissions fails
   expect_failure: true
   permissions:

@@ -8,8 +8,8 @@ if [[ -z "${SERVER_PERMISSIONS:-}" ]]; then
     exit 1
 fi
 
-# Start the Node server under gatekeeper enforcement (run mode).
-/gatekeeper run ${SERVER_PERMISSIONS} -- python3 -m http.server 8080 1>/proc/1/fd/1 2>/proc/1/fd/2 &
+# Start the Python server under gatekeeper enforcement (run mode), binding to 0.0.0.0.
+/gatekeeper run ${SERVER_PERMISSIONS} -- python3 -m http.server 8080 --bind 0.0.0.0 1>/proc/1/fd/1 2>/proc/1/fd/2 &
 
 # Number of retries
 max_retries=5
