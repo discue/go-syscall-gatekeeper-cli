@@ -203,34 +203,37 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							return p.Read(Addr(addr), v)
 						},
 					}
-					if name == "socket" {
+					switch {
+					case name == "socket":
 						allow = syscalls.IsSocketAllowed(s, rec.Event == SyscallEnter)
-					} else if name == "connect" {
+					case name == "connect":
 						allow = syscalls.IsConnectAllowed(s, rec.Event == SyscallEnter)
-					}
 
-					if (name == "openat" || name == "open" || name == "openat2") &&
+					case name == "openat2" &&
 						runtime.Get().FileSystemAllowRead &&
-						!runtime.Get().FileSystemAllowWrite {
+						!runtime.Get().FileSystemAllowWrite:
 						// Gate file open syscalls when only read access is allowed.
-						switch name {
-						case "openat":
+						allow = syscalls.IsOpenAt2ReadOnly(s, rec.Event == SyscallEnter)
+					case name == "openat" &&
+						runtime.Get().FileSystemAllowRead &&
+						!runtime.Get().FileSystemAllowWrite:
+						// Gate file open syscalls when only read access is allowed.
 							allow = syscalls.IsOpenAtReadOnly(s, rec.Event == SyscallEnter)
-						case "open":
+					case name == "open" &&
+						runtime.Get().FileSystemAllowRead &&
+						!runtime.Get().FileSystemAllowWrite:
+						// Gate file open syscalls when only read access is allowed.
 							allow = syscalls.IsOpenReadOnly(s, rec.Event == SyscallEnter)
-						case "openat2":
-							allow = syscalls.IsOpenAt2ReadOnly(s, rec.Event == SyscallEnter)
-						}
-					} else if name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto" {
+					case name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto":
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
 						allow = syscalls.IsWriteAllowed(s, rec.Event == SyscallEnter)
 
 						// {
-						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
-						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
-						// 	allow = isEventFd
+						//     isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+						//     println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
+						//     allow = isEventFd
 						// }
 
 						if !allow {
@@ -238,23 +241,23 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							println(fmt.Sprintf("Trying to write to fd %d which is of type %s", fd, fdType))
 						}
 
-					} else if name == "read" || name == "readv" || name == "recv" || name == "recvfrom" || name == "recvmsg" || name == "recvmmsg" {
+					case name == "read" || name == "readv" || name == "recv" || name == "recvfrom" || name == "recvmsg" || name == "recvmmsg":
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
 						allow = syscalls.IsReadAllowed(s, rec.Event == SyscallEnter)
 
 						// if !allow {
-						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
-						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
-						// 	allow = isEventFd
+						//     isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
+						//     println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
+						//     allow = isEventFd
 						// }
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
 							println(fmt.Sprintf("Trying to read from fd %d which is of type %s", fd, fdType))
 						}
-					} else if name == "shutdown" {
+					case name == "shutdown":
 						// shutdown(int sockfd, int how)
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
@@ -265,8 +268,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							fdType := args.FdType(p.pid, fd)
 							println(fmt.Sprintf("Trying to shutdown fd %d which is of type %s", fd, fdType))
 						}
-
-					} else if name == "close" {
+					case name == "close":
 						// close(int fd)
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
@@ -277,7 +279,6 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 							fdType := args.FdType(p.pid, fd)
 							println(fmt.Sprintf("Trying to close fd %d which is of type %s", fd, fdType))
 						}
-
 					}
 
 					if !allow {
