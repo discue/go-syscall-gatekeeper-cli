@@ -6,7 +6,7 @@ import "golang.org/x/sys/unix"
 
 // IsOpenAt2ReadOnly checks read-only intent for openat2 by decoding open_how
 // from tracee memory via Syscall.Reader.
-func IsOpenAt2ReadOnly(s Syscall) bool {
+func IsOpenAt2ReadOnly(s Syscall, isEnter bool) bool {
 	type openHow struct {
 		Flags   uint64
 		Mode    uint64

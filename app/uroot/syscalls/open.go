@@ -6,7 +6,7 @@ import "golang.org/x/sys/unix"
 
 // IsOpenReadOnly checks open(pathname, flags, mode) for read-only intent.
 // Unified signature: extract flags from Syscall.Args.
-func IsOpenReadOnly(s Syscall) bool {
+func IsOpenReadOnly(s Syscall, isEnter bool) bool {
 	flags := int(s.Args[1].Uint())
 	writeAccMask := unix.O_WRONLY | unix.O_RDWR
 	if flags&writeAccMask == 0 {

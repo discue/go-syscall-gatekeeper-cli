@@ -6,7 +6,7 @@ import (
 
 // IsOpenAtReadOnly checks read-only intent for openat.
 // Unified signature: extract flags from Syscall.Args.
-func IsOpenAtReadOnly(s Syscall) bool {
+func IsOpenAtReadOnly(s Syscall, isEnter bool) bool {
 	flags := int(s.Args[3].Uint())
 	writeAccMask := unix.O_WRONLY | unix.O_RDWR
 	if flags&writeAccMask == 0 {

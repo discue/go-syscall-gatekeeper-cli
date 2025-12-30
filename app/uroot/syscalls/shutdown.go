@@ -9,7 +9,7 @@ import (
 
 // IsShutdownAllowed returns whether shutdown should be permitted.
 // Unified signature: derive fd traits via args helpers using Syscall.TraceePID.
-func IsShutdownAllowed(s Syscall) bool {
+func IsShutdownAllowed(s Syscall, isEnter bool) bool {
 	fd := s.Args[0].Int()
 	isSocket := args.IsSocket(s.TraceePID, fd)
 	if (runtime.Get().NetworkAllowServer || runtime.Get().NetworkAllowClient || runtime.Get().LocalSocketsAllow) && isSocket {
@@ -19,5 +19,5 @@ func IsShutdownAllowed(s Syscall) bool {
 	if isStdStream {
 		return true
 	}
-	return runtime.Get().SyscallsAllowMap["shutdown"]
+	return false
 }

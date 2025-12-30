@@ -3,13 +3,15 @@
 package syscalls
 
 import (
+	"fmt"
+
 	"github.com/discue/go-syscall-gatekeeper/app/runtime"
 	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls/args"
 )
 
 // IsReadAllowed decides allowance for read-like syscalls using fd context.
 // Unified signature: derive fd traits via args helpers using Syscall.TraceePID.
-func IsReadAllowed(s Syscall) bool {
+func IsReadAllowed(s Syscall, isEnter bool) bool {
 	fd := s.Args[0].Int()
 	isStdStream := args.IsStandardStream(fd)
 	if isStdStream {
@@ -27,5 +29,10 @@ func IsReadAllowed(s Syscall) bool {
 	if isPipe {
 		return true
 	}
-	return runtime.Get().SyscallsAllowMap["read"]
+	isEventFd := args.FdType(s.TraceePID, fd) == args.FDAnonEvent
+	if isEventFd {
+		println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", "write", fd, isEventFd))
+		return true
+	}
+	return false
 }

@@ -204,9 +204,9 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						},
 					}
 					if name == "socket" {
-						allow = allow || syscalls.IsSocketAllowed(s)
+						allow = syscalls.IsSocketAllowed(s, rec.Event == SyscallEnter)
 					} else if name == "connect" {
-						allow = allow || syscalls.IsConnectAllowed(s)
+						allow = syscalls.IsConnectAllowed(s, rec.Event == SyscallEnter)
 					}
 
 					if (name == "openat" || name == "open" || name == "openat2") &&
@@ -215,22 +215,22 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						// Gate file open syscalls when only read access is allowed.
 						switch name {
 						case "openat":
-							allow = syscalls.IsOpenAtReadOnly(s)
+							allow = syscalls.IsOpenAtReadOnly(s, rec.Event == SyscallEnter)
 						case "open":
-							allow = syscalls.IsOpenReadOnly(s)
+							allow = syscalls.IsOpenReadOnly(s, rec.Event == SyscallEnter)
 						case "openat2":
-							allow = syscalls.IsOpenAt2ReadOnly(s)
+							allow = syscalls.IsOpenAt2ReadOnly(s, rec.Event == SyscallEnter)
 						}
 					} else if name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto" {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						allow = allow || syscalls.IsWriteAllowed(s)
+						allow = syscalls.IsWriteAllowed(s, rec.Event == SyscallEnter)
 
 						// {
 						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
 						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
-						// 	allow = allow || isEventFd
+						// 	allow = isEventFd
 						// }
 
 						if !allow {
@@ -242,12 +242,12 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						allow = allow || syscalls.IsReadAllowed(s)
+						allow = syscalls.IsReadAllowed(s, rec.Event == SyscallEnter)
 
 						// if !allow {
 						// 	isEventFd := args.FdType(p.pid, fd) == args.FDAnonEvent
 						// 	println(fmt.Sprintf("Trying to %s from fd %d which is a anon eventfd %t", name, fd, isEventFd))
-						// 	allow = allow || isEventFd
+						// 	allow = isEventFd
 						// }
 
 						if !allow {
@@ -259,7 +259,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						allow = allow || syscalls.IsShutdownAllowed(s)
+						allow = syscalls.IsShutdownAllowed(s, rec.Event == SyscallEnter)
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
@@ -271,7 +271,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						allow = allow || syscalls.IsCloseAllowed(s)
+						allow = syscalls.IsCloseAllowed(s)
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
