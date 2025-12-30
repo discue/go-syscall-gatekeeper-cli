@@ -271,7 +271,7 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
 
-						allow = syscalls.IsCloseAllowed(s)
+						allow = syscalls.IsCloseAllowed(s, rec.Event == SyscallEnter)
 
 						if !allow {
 							fdType := args.FdType(p.pid, fd)
