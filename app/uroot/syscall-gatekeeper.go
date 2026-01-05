@@ -1,7 +1,7 @@
 package uroot
 
 import (
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
+	"github.com/cuandari/lib/app/runtime"
 )
 
 func allowSyscall(name string) bool {

@@ -1,4 +1,4 @@
-module github.com/discue/go-syscall-gatekeeper
+module github.com/cuandari/lib
 
 go 1.24.0
 

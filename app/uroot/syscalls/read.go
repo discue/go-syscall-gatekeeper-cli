@@ -5,8 +5,8 @@ package syscalls
 import (
 	"fmt"
 
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
-	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls/args"
+	"github.com/cuandari/lib/app/runtime"
+	"github.com/cuandari/lib/app/uroot/syscalls/args"
 )
 
 // IsReadAllowed decides allowance for read-like syscalls using fd context.

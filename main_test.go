@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
+	"github.com/cuandari/lib/app/runtime"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"bytes"
 
-	"github.com/discue/go-syscall-gatekeeper/cli"
+	"github.com/cuandari/lib/cli"
 	"github.com/stretchr/testify/assert"
 )
 

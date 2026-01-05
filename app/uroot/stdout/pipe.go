@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/discue/go-syscall-gatekeeper/app/utils"
+	"github.com/cuandari/lib/app/utils"
 )
 
 func PipeStdOut(ctx context.Context, from io.ReadCloser) {

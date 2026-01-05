@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
-	"github.com/discue/go-syscall-gatekeeper/app/uroot"
-	"github.com/discue/go-syscall-gatekeeper/cli"
+	"github.com/cuandari/lib/app/runtime"
+	"github.com/cuandari/lib/app/uroot"
+	"github.com/cuandari/lib/cli"
 )
 
 var osExit = os.Exit // Assign exit to a variable to allow mocking in unit tests

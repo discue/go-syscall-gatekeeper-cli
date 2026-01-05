@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
-	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls"
-	"github.com/discue/go-syscall-gatekeeper/app/uroot/syscalls/args"
+	"github.com/cuandari/lib/app/runtime"
+	"github.com/cuandari/lib/app/uroot/syscalls"
+	"github.com/cuandari/lib/app/uroot/syscalls/args"
 	sec "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
 )

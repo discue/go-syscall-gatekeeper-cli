@@ -5,7 +5,7 @@ package syscalls
 import (
 	"fmt"
 
-	"github.com/discue/go-syscall-gatekeeper/app/runtime"
+	"github.com/cuandari/lib/app/runtime"
 	"golang.org/x/sys/unix"
 )
 

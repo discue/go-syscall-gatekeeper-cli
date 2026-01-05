@@ -23,9 +23,9 @@ import (
 	"syscall"
 	"time"
 
-	runtimeConfig "github.com/discue/go-syscall-gatekeeper/app/runtime"
-	"github.com/discue/go-syscall-gatekeeper/app/uroot/stdout"
-	"github.com/discue/go-syscall-gatekeeper/app/utils"
+	runtimeConfig "github.com/cuandari/lib/app/runtime"
+	"github.com/cuandari/lib/app/uroot/stdout"
+	"github.com/cuandari/lib/app/utils"
 
 	"golang.org/x/sys/unix"
 )
