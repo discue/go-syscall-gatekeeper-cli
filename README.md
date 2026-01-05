@@ -1,23 +1,28 @@
 
-<p align="center"><a href="https://www.discue.io/" target="_blank" rel="noopener noreferrer"><img width="256" src="https://www.discue.io/icons-fire-no-badge-square/web/icon-192.png" alt="Vue logo"></a></p>
+<p align="center">
+<picture>
+  <!-- <source media="(prefers-color-scheme: dark)" srcset="https://avatars.githubusercontent.com/u/252919145?s=200&v=4"> -->
+  <img alt="Cuandari Logo featuring a medieval helmet" src="https://avatars.githubusercontent.com/u/252919145?s=200&v=4" width="200" height="200" style="border-radius: 2.5rem">
+</picture>
+</p>
 
 <br/>
 <div align="center">
 
 [![contributions - welcome](https://img.shields.io/badge/contributions-welcome-blue/green)](/CONTRIBUTING.md "Go to contributions doc")
-[![GitHub License](https://img.shields.io/github/license/discue/go-syscall-gatekeeper.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/blob/master/LICENSE)
+[![GitHub License](https://img.shields.io/github/license/cuandari/lib-oss.svg)](https://github.com/cuandari/lib-oss/blob/main/LICENSE)
 <br/>
-[![Go Report Card](https://goreportcard.com/badge/github.com/discue/go-syscall-gatekeeper)](https://goreportcard.com/report/github.com/discue/go-syscall-gatekeeper)
-[![Go](https://img.shields.io/github/go-mod/go-version/discue/go-syscall-gatekeeper-cli
-)](https://github.com/discue/go-syscall-gatekeeper-cli/blob/main/go.mod)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cuandari/lib-oss)](https://goreportcard.com/report/github.com/cuandari/lib-oss)
+[![Go](https://img.shields.io/github/go-mod/go-version/cuandari/lib-oss
+)](https://github.com/cuandari/lib-oss/blob/main/go.mod)
 <br/>
-[![lints](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/lints.yml/badge.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/lints.yml)
-[![tests](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/discue/go-syscall-gatekeeper-cli/actions/workflows/tests.yml)
+[![lints](https://github.com/cuandari/lib-oss/actions/workflows/lints.yml/badge.svg)](https://github.com/cuandari/lib-oss/actions/workflows/lints.yml)
+[![tests](https://github.com/cuandari/lib-oss/actions/workflows/tests.yml/badge.svg)](https://github.com/cuandari/lib-oss/actions/workflows/tests.yml)
 </div>
 
 <br/>
 
-# go-syscall-gatekeeper
+# cuandari/lib - Proecess Manager with Privilege Restriction
 Go process manager that can be used to 
 - start other processes and control their lifecycle,
 - watch the status of the started process and return appropriate exit codes,
@@ -74,7 +79,7 @@ Exiting with code 0
 Install the package:
 
 ```bash
-go get https://github.com/discue/go-syscall-gatekeeper
+go get https://github.com/cuandari/lib-oss
 ```
 
 ## 🔣 Usage
