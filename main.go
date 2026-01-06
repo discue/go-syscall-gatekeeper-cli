@@ -162,7 +162,6 @@ func configureAndParseArgs() []string {
 		// Basic time queries and sleep are broadly required and safe
 		allowList.AllowBasicTime()
 		allowList.AllowMisc()
-		allowList.AllowSecurityAndPermissions()
 		allowList.AllowSystemInformation()
 	}
 
