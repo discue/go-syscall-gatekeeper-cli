@@ -1,49 +1,50 @@
 # AI Coding Agent Instructions for go-syscall-gatekeeper
 
-These instructions capture project-specific architecture, workflows, and patterns so an AI agent can be productive quickly in this repo.
+These instructions capture the essential, repository-specific knowledge an AI coding agent needs to be productive quickly.
 
-**Big Picture**
-- **Purpose:** A CLI "gatekeeper" that starts/traces a target process and enforces syscall permissions via ptrace/seccomp.
-- **Entrypoint:** [main.go](../main.go) parses flags, builds `runtime.Config`, starts the tracee via `uroot.Exec()` and coordinates shutdown.
-- **Tracing & Enforcement:** [app/uroot/tracer.go](../app/uroot/tracer.go) drives a ptrace loop, classifies events, inspects syscall args, and enforces based on runtime config and allow-maps.
-- **Policy:** [app/runtime/config.go](../app/runtime/config.go) defines `Config` (env-driven via `envconfig`) and builds an allow-map of syscalls; [app/runtime/syscall_map.go](../app/runtime/syscall_map.go) groups syscalls by capability (filesystem, network, process mgmt, etc.).
-- **Gatekeeping:** [app/uroot/syscall-gatekeeper.go](../app/uroot/syscall-gatekeeper.go) checks `runtime.Get().SyscallsAllowMap[name]` to allow/deny.
-- **u-root basis:** Many tracing components derive from u-root’s strace; see [app/uroot/README.md](../app/uroot/README.md).
+## Big picture
+- **Purpose:** A library + small runtime that starts/traces a target process and enforces syscall permissions using ptrace/seccomp primitives adapted from u-root's strace.
+- **Library API:** The project exposes a public API in `package gatekeeper` (`gatekeeper.Start` / `gatekeeper.StartAndWait`) so a separate CLI project can construct a `runtime.Config` and invoke the library to start/monitor a tracee.
+- **Tracing & enforcement:** The tracing loop lives in `app/uroot/tracer.go` and consults policy in `runtime.Config` and `SyscallsAllowMap`. Per-syscall helpers live under `app/uroot/syscalls/`.
+- **Config:** Runtime configuration is primarily environment-driven (via `envconfig`) but can be injected programmatically via `runtime.Set(cfg)` and cleared with `runtime.Reset()` (useful for tests).
 
-**Execution Modes & Flags**
-- **Modes:** `trace` vs `run` set in [configureAndParseArgs()](../main.go) and `GATEKEEPER_EXECUTION_MODE` env. `trace` enforces and logs, `run` executes without restrictions.
-- **Permission flags:** Examples in [README.md](../README.md). Flags map to grouped allow-lists: `--allow-file-system-read`, `--allow-file-system-write`, `--allow-network-client`, `--allow-network-server`, plus broader categories (memory, signals, IPC, etc.).
-- **Implicit defaults:** Unless `--no-implicit-allow` is set, baseline categories (process mgmt, memory, sync, signals, misc, security, system info) are enabled.
-- **Denied action:** `--on-syscall-denied {kill|error}` chooses SIGKILL vs simulated error (SIGSYS / EPERM) on disallowed syscalls.
-- **Delayed enforcement:** Use `--no-enforce-on-startup` with one trigger: `--trigger-enforce-on-log-match` or `--trigger-enforce-on-signal`. See e2e config examples under [test-e2e/configuration](../test-e2e/configuration).
+## Important files / where to look
+- Runtime & policy: `app/runtime/config.go`, `app/runtime/syscall_map.go` (syscall groups)
+- Tracer logic: `app/uroot/tracer.go`, `app/uroot/syscall-gatekeeper.go`
+- Per-syscall helpers: `app/uroot/syscalls/*.go` (add syscall-specific gating here)
+- Public API: `gatekeeper/gatekeeper.go` (Start / StartAndWait)
+- Process exec & strace wrapper: `app/uroot/uroot.go` (Exec, Trace, Strace)
+- E2E scenarios & runner: `test-e2e/` and `test-e2e/run.sh`
 
-**Runtime Config via Environment**
-- **Source:** Loaded by `envconfig` in [app/runtime/config.go](../app/runtime/config.go). Prefix `GATEKEEPER_` with split_words.
-- **Key vars:** `GATEKEEPER_SYSCALLS_ALLOW_LIST`, `GATEKEEPER_SYS_CALLS_KILL_TARGET_IF_NOT_ALLOWED`, `GATEKEEPER_SYS_CALLS_DENY_TARGET_IF_NOT_ALLOWED`, `GATEKEEPER_FILE_SYSTEM_ALLOW_READ`, `GATEKEEPER_FILE_SYSTEM_ALLOW_WRITE`, `GATEKEEPER_NETWORK_ALLOW_CLIENT`, `GATEKEEPER_NETWORK_ALLOW_SERVER`, `GATEKEEPER_ENFORCE_ON_STARTUP`, `GATEKEEPER_EXECUTION_MODE` (TRACE|RUN), `GATEKEEPER_TRIGGER_ENFORCE_LOG_MATCH`, `GATEKEEPER_TRIGGER_ENFORCE_SIGNAL`, `GATEKEEPER_VERBOSE_LOG`.
-- **Allow-map creation:** `CreateSyscallAllowMap()` initializes a full syscall map defaulting to deny/allow based on list emptiness, then flips entries for any specified allow-list names.
+## Key concepts & conventions
+- **Central source of truth:** `runtime.Get()` reads the active configuration. Use `runtime.Set(cfg)` to inject a programmatic config for calls originating from the external CLI or for tests.
+- **Allow-map semantics:** `CreateSyscallAllowMap()` iterates syscall numbers and builds a name->bool map. If the allow-list is empty, defaults are permissive; provided names flip entries accordingly.
+- **FD heuristics:** Tracer uses fd-type helpers (in `app/uroot/syscall-argument.go` and `app/uroot/syscalls/*`) to decide permission for socket/file/pipe access — prefer adding checks in the syscall helper rather than directly modifying tracer logic.
+- **Cancellation & exit model:** The code uses `context.WithCancelCause` and surface-specific causes as `uroot.ExitEventError`. `uroot.Exec` returns an exit context you can wait on.
+- **Platform constraints:** The tracing code is linux-only (see build tags in `app/uroot/uroot.go`). Many tests and E2E scenarios require a Linux kernel with ptrace/seccomp; use Docker or WSL2 on non-Linux hosts.
 
-**Syscall Handling Patterns**
-- **FD-type heuristics:** In [app/uroot/tracer.go](../app/uroot/tracer.go), read/write syscalls consult FD type via `args.IsStandardStream`, `args.IsSocket`, `args.IsFile`, `args.IsPipe`, `args.FdType` to grant access when the corresponding category is enabled.
-- **Filesystem reads vs writes:** For `openat`, read-only allowance is derived from `O_RDONLY` vs write flags when `FileSystemAllowRead` is true and `FileSystemAllowWrite` is false.
-- **Per-syscall logic:** Add custom handling under [app/uroot/syscalls](../app/uroot/syscalls). Keep enforcement decisions in tracer and the allow-map consistent.
+## Developer workflows
+- Build (Linux):
+  - `go build ./...` (or `go build -o gatekeeper .` inside a module that provides a main)
+  - The repo no longer contains a user-facing CLI; the external CLI project should import `github.com/cuandari/lib/gatekeeper` and call `Start`/`StartAndWait`.
+- Unit tests: `go test ./...` or use `bash ./test.sh`. Some tests require ptrace/seccomp and will fail on non-Linux environments.
+- E2E tests: `test-e2e/run.sh` — the runner expects a gatekeeper binary present; when working locally on non-Linux, run the tests inside Docker using the provided Dockerfile or use WSL2.
 
-**Developer Workflows**
-- **Build (Linux preferred):**
-  ```bash
-  go build -o gatekeeper .
-  ./gatekeeper trace --allow-file-system-read --allow-network-client curl -v google.com
-  ```
-- **Unit tests:** `go test ./...` or `bash ./test.sh`. Linux kernel with ptrace/seccomp required for tracing logic.
-- **E2E tests:** See [test-e2e/run.sh](../test-e2e/run.sh) and grouped scenarios under [test-e2e](../test-e2e) (filesystem, network, configuration, process-management). Use WSL2 or Docker on Windows.
-- **Docker:** Dockerfile exists; use it to run tests on Linux kernel if host OS lacks seccomp/ptrace.
+## How to extend the project (common tasks)
+- Add a syscall-specific gate: create `app/uroot/syscalls/<name>.go` with helper functions and call it from `tracer.go` switch-case (see existing patterns for `socket`, `connect`, `openat`, `read`, `write`).
+- Add a new capability group: extend `app/runtime/syscall_map.go` and add wiring in the external CLI to set flags that flip these groups via `runtime.Config`.
+- Add config values: prefer adding typed fields to `runtime.Config` and ensure `CreateSyscallAllowMap` memberships remain consistent.
 
-**Conventions & Tips**
-- **Central source of truth:** Policy toggles live in `runtime.Config`; tracer reads from `runtime.Get()` only.
-- **Grouping:** Extend capability sets in [app/runtime/syscall_map.go](../app/runtime/syscall_map.go) when adding features; wire flags in [main.go](../main.go) to those groups via `allowList` methods.
-- **Logging:** Tracer prints concise decision logs (syscall name, FD type, allowance). Keep additions similarly minimal and actionable.
-- **Exit codes:** Aggregated in `waitForShutdown()`; signal exits map to code 111.
+## Integration points
+- seccomp name/number mapping: `github.com/seccomp/libseccomp-golang` (used when building syscall map)
+- OS primitives: `golang.org/x/sys/unix` for ptrace/wait
+- Upstream inspiration: u-root's `strace` implementation (see `app/uroot/README.md`)
 
-**Integration Points**
-- **libseccomp:** [github.com/seccomp/libseccomp-golang](https://github.com/seccomp/libseccomp-golang) used for syscall name/number mapping and policy concepts.
-- **u-root:** Tracing primitives adapted from u-root’s strace implementation.
-- **x/sys/unix:** For ptrace and wait operations.
+## Quick example (how an external CLI should call this repo)
+```go
+cfg := &runtime.Config{ /* set flags or load via env */ }
+runtime.Set(cfg)
+code, err := gatekeeper.StartAndWait(context.Background(), cfg, "curl", []string{"-v","https://google.com"})
+if err != nil { /* handle start error */ }
+fmt.Printf("exit code: %d\n", code)
+```
