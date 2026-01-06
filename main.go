@@ -154,7 +154,7 @@ func configureAndParseArgs() []string {
 		allowList.Syscalls = append(allowList.Syscalls, dynamicSyscalls...)
 	}
 
-	if !*c.AllowImplicitCommands {
+	if *c.AllowImplicitCommands {
 		allowList.AllowProcessManagement()
 		allowList.AllowMemoryManagement()
 		allowList.AllowProcessSynchronization()
