@@ -9,7 +9,7 @@ if [[ -z "${SERVER_PERMISSIONS:-}" ]]; then
     exit 1
 fi
 
-/gatekeeper run --no-enforce-on-startup --trigger-enforce-on-log-match="Starting server" ${SERVER_PERMISSIONS} -- /server > /dev/null 2>&1 &
+/gatekeeper run --enforce-on-startup=false --trigger-enforce-on-log-match="Starting server" ${SERVER_PERMISSIONS} -- /server > /dev/null 2>&1 &
 
 # Number of retries
 max_retries=5

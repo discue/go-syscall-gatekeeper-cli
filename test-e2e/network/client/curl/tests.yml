@@ -5,13 +5,13 @@
   expect_failure: false
   permissions:
     - --allow-network-client
-    - --allow-local-sockets
+    - --allow-network-local-sockets
     - --allow-file-system-read
 - describe: curl with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
-    - --allow-local-sockets
+    - --allow-network-local-sockets
     - --allow-file-system-read
 - describe: curl with read filesystem permissions fails
   expect_failure: true

@@ -4,7 +4,7 @@ set -uo pipefail
 
 declare -r main_path="$1"
 
-$main_path run --no-enforce-on-startup
+$main_path run --enforce-on-startup=false
 
 if [[ $? -ne 100 ]]; then
     exit 1

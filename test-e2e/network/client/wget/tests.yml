@@ -6,13 +6,13 @@
   permissions:
     - --allow-network-client
     - --allow-file-system-read
-    - --allow-local-sockets
+    - --allow-network-local-sockets
 - describe: wget with network server permissions fails
   expect_failure: true
   permissions:
     - --allow-network-server
     - --allow-file-system-read
-    - --allow-local-sockets
+    - --allow-network-local-sockets
 - describe: wget with read filesystem permissions fails
   expect_failure: true
   permissions:

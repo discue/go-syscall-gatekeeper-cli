@@ -12,10 +12,10 @@
 - describe: ls directory listing with read-only filesystem permissions succeeds
   expect_failure: false
   permissions:
-    - --allow-local-sockets
+    - --allow-network-local-sockets
     - --allow-file-system-read
 - describe: ls directory listing with write-only filesystem permissions succeeds
   expect_failure: false
   permissions:
-    - --allow-local-sockets
+    - --allow-network-local-sockets
     - --allow-file-system-write

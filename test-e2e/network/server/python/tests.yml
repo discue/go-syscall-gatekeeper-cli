@@ -14,7 +14,7 @@
   permissions:
     - --allow-file-system-read
     - --allow-network-server
-    - --allow-local-sockets
+    - --allow-network-local-sockets
 - describe: python server with read filesystem permissions fails
   configure_gatekeeper_entrypoint: false
   expect_failure: true

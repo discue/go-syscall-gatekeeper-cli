@@ -7,7 +7,7 @@ declare -r script_path="$( dirname -- "${BASH_SOURCE[0]}"; )";   # Get the direc
 
 $main_path run \
 --allow-file-system-read \
---no-enforce-on-startup \
+--enforce-on-startup=false \
 --trigger-enforce-on-log-match="enforce gatekeeping" \
 --on-syscall-denied=error \
 bash -c $script_path/log-match.bash

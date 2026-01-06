@@ -48,7 +48,7 @@ type Command struct {
 
 	AllowNetworkClient             *bool
 	AllowNetworkServer             *bool
-	AllowLocalSockets              *bool
+	AllowNetworkLocalSockets       *bool
 	AllowProcessManagement         *bool
 	AllowNetworking                *bool
 	AllowMemoryManagement          *bool
@@ -60,8 +60,8 @@ type Command struct {
 	AllowProcessSynchronization    *bool
 	AllowMisc                      *bool
 
-	NoEnforceOnStart *bool
-	NoImplicitAllow  *bool
+	EnforceOnStartup      *bool
+	AllowImplicitCommands *bool
 
 	Action SyscallDeniedAction
 }
@@ -72,8 +72,8 @@ func NewCommand() *Command {
 	c := &Command{flagSet: fs}
 
 	// Triggers & verbosity
-	c.TriggerEnforceOnLogMatch = fs.String("trigger-enforce-on-log-match", "", "Enable enforcement when trace output contains this string (use with --no-enforce-on-startup)")
-	c.TriggerEnforceOnSignal = fs.String("trigger-enforce-on-signal", "", "Enable enforcement upon receiving this signal (name or number, use with --no-enforce-on-startup)")
+	c.TriggerEnforceOnLogMatch = fs.String("trigger-enforce-on-log-match", "", "Enable enforcement when trace output contains this string (use with -enforce-on-startup=false)")
+	c.TriggerEnforceOnSignal = fs.String("trigger-enforce-on-signal", "", "Enable enforcement upon receiving this signal (name or number, use with -enforce-on-startup=false)")
 	c.Verbose = fs.Bool("verbose", false, "Enable verbose decision logging from the tracer")
 
 	// Permissions
@@ -84,19 +84,19 @@ func NewCommand() *Command {
 
 	c.AllowNetworkClient = fs.Bool("allow-network-client", false, "Allow outbound network connections (socket/connect/send/recv)")
 	c.AllowNetworkServer = fs.Bool("allow-network-server", false, "Allow listening sockets and incoming connections (socket/bind/listen/accept)")
-	c.AllowLocalSockets = fs.Bool("allow-local-sockets", false, "Allow local-only sockets (AF_UNIX, AF_NETLINK) for client use")
+	c.AllowNetworkLocalSockets = fs.Bool("allow-network-local-sockets", false, "Allow local-only sockets (AF_UNIX, AF_NETLINK) for client use")
 	c.AllowProcessManagement = fs.Bool("allow-process-management", false, "Allow process/thread creation and lifecycle control (exec/fork/clone/wait)")
 	c.AllowNetworking = fs.Bool("allow-networking", false, "Allow both client and server networking capabilities")
 	c.AllowMemoryManagement = fs.Bool("allow-memory-management", false, "Allow memory mapping and related syscalls (mmap/mprotect/mremap/brk)")
-	c.AllowSignals = fs.Bool("allow-signals", false, "Allow setting and handling signals (rt_sig*, sigaltstack)")
+	c.AllowSignals = fs.Bool("allow-signals", false, "Allow setting and handling POSIX signals (rt_sig*, sigaltstack)")
 	c.AllowTimersAndClocksManagement = fs.Bool("allow-timers-and-clocks-management", false, "Allow timers and clock syscalls (clock_gettime, timerfd_*, nanosleep)")
 	c.AllowSecurityAndPermissions = fs.Bool("allow-security-and-permissions", false, "Allow identity/capability changes and seccomp (setuid/setgid/capset/seccomp). Risky; enable only if needed.")
 	c.AllowSystemInformation = fs.Bool("allow-system-information", false, "Allow system information and rlimit operations (uname/sysinfo/getrlimit/setrlimit)")
 	c.AllowProcessCommunication = fs.Bool("allow-process-communication", false, "Allow IPC mechanisms (SysV shared memory, semaphores, message queues, POSIX mqueue)")
 	c.AllowProcessSynchronization = fs.Bool("allow-process-synchronization", false, "Allow synchronization primitives (futex/flock/robust list)")
-	c.AllowMisc = fs.Bool("allow-misc", false, "Allow miscellaneous syscalls (includes ioctl, splice, vmsplice). Risky; enable only if required.")
-	c.NoEnforceOnStart = fs.Bool("no-enforce-on-startup", false, "Start without enforcement; enable later via a trigger flag")
-	c.NoImplicitAllow = fs.Bool("no-implicit-allow", false, "Disable baseline implicit permissions; only allow what is explicitly specified")
+	c.AllowMisc = fs.Bool("allow-misc", false, "Allow miscellaneous syscalls (includes ioctl, splice, vmsplice).")
+	c.EnforceOnStartup = fs.Bool("enforce-on-startup", true, "Start with enforcement enabled on startup (default)")
+	c.AllowImplicitCommands = fs.Bool("allow-implicit-commands", true, "Enable baseline implicit permissions; allow additional commands by default")
 
 	// Custom action flag
 	fs.Var(&c.Action, "on-syscall-denied", "Action when a syscall is denied: 'kill' (SIGKILL) or 'error' (simulate EPERM via SIGSYS)")
