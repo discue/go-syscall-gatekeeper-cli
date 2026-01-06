@@ -94,14 +94,45 @@ The `run` subcommand runs the given command without any syscall restrictions. Th
 ```
 
 ### 🤺 Permissions
-You can pass the following flags:
-- `--allow-file-system-read` to allow the started process to read from the file system,
-- `--allow-file-system-write` to allow the started process to write to the file system,
-- `--allow-network-client` to allow the started process to open sockets and open connections to other servers,
-- `--allow-network-server` to allow the started process to listen on ports and accept incoming connections.
+You can pass the following flags.
+
+- Triggers & verbosity:
+  - `--trigger-enforce-on-log-match` — Enable enforcement when trace output contains this string (use with `--enforce-on-startup=false`).
+  - `--trigger-enforce-on-signal` — Enable enforcement upon receiving this signal (name or number, use with `--enforce-on-startup=false`).
+  - `--verbose` — Enable verbose decision logging from the tracer.
+
+- Filesystem:
+  - `--allow-file-system-read` — Allow read-only filesystem access (open O_RDONLY, read, stat, list).
+  - `--allow-file-system-write` — Allow modifying the filesystem (create, write, rename, unlink, truncate).
+  - `--allow-file-system` — Alias for `--allow-file-system-write` (full read/write filesystem access).
+  - `--allow-file-system-permissions` — Allow changing file ownership and permissions (chmod/chown/fchmod/fchown*).
+
+- Network & sockets:
+  - `--allow-network-client` — Allow outbound network connections (socket/connect/send/recv).
+  - `--allow-network-server` — Allow listening sockets and incoming connections (socket/bind/listen/accept).
+  - `--allow-network-local-sockets` — Allow local-only sockets (AF_UNIX, AF_NETLINK) for client use.
+  - `--allow-networking` — Enable both client and server networking capabilities.
+
+- Process & runtime:
+  - `--allow-process-management` — Allow process/thread creation and lifecycle control (exec/fork/clone/wait).
+  - `--allow-memory-management` — Allow memory mapping and related syscalls (mmap/mprotect/mremap/brk).
+  - `--allow-signals` — Allow setting and handling POSIX signals (rt_sig*, sigaltstack).
+  - `--allow-timers-and-clocks-management` — Allow timers and clocks (clock_gettime, timerfd_*, nanosleep).
+  - `--allow-security-and-permissions` — Allow identity/capability changes and seccomp (setuid/setgid/capset/seccomp). Risky; enable only if needed.
+  - `--allow-system-information` — Allow system information and rlimit operations (uname/sysinfo/getrlimit/setrlimit).
+  - `--allow-process-communication` — Allow IPC mechanisms (SysV shared memory, semaphores, mqueue).
+  - `--allow-process-synchronization` — Allow synchronization primitives (futex/flock/robust list).
+  - `--allow-misc` — Allow miscellaneous syscalls (includes ioctl, splice, vmsplice).
+
+- Enforcement / baseline / action:
+  - `--enforce-on-startup` (default true) — Start with enforcement enabled on startup.
+  - `--allow-implicit-commands` (default true) — Enable the safe baseline implicit permissions (enabled by default).
+  - `--on-syscall-denied {kill|error}` — Action when a syscall is denied: `kill` (SIGKILL) or `error` (simulate EPERM via SIGSYS).
+
+
 
 ## Baseline
-By default (unless you pass `--no-implicit-allow`), gatekeeper enables a safe baseline including process management, memory, synchronization, signals, basic time queries and sleep (`clock_gettime`, `gettimeofday`, `nanosleep`), miscellaneous, security, and system information. This avoids breaking common applications that need time functions without requiring extra flags. Use `--allow-timers-and-clocks-management` for the full timers/clock set (e.g., `timerfd_*`, `setitimer`), or keep the default minimal set for tighter policies.
+By default (unless you pass `--allow-implicit-commands=false`), gatekeeper enables a safe baseline including process management, memory, synchronization, signals, basic time queries and sleep (`clock_gettime`, `gettimeofday`, `nanosleep`), miscellaneous, security, and system information. This avoids breaking common applications that need time functions without requiring extra flags. Use `--allow-timers-and-clocks-management` for the full timers/clock set (e.g., `timerfd_*`, `setitimer`), or keep the default minimal set for tighter policies. To explicitly disable the implicit baseline, pass `--allow-implicit-commands=false`. (Note: this flag replaces older `--no-implicit-allow`-style usage.)
 
 #### Dynamically allow individual syscalls
 In addition to grouped permissions, you can enable specific syscalls directly from the CLI without modifying configuration files. This is useful for targeted exceptions.
