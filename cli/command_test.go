@@ -7,7 +7,7 @@ import (
 
 func TestParseAllowFileSystemPaths(t *testing.T) {
 	c := NewCommand()
-	args := []string{"--allow-file-system-paths=/a", "--allow-file-system-path=/b", "--allow-file-system-path=/c"}
+	args := []string{"--allow-file-system-path=/a", "--allow-file-system-path=/b", "--allow-file-system-path=/c"}
 	if err := c.Parse(args); err != nil {
 		t.Fatalf("Parse failed: %v", err)
 	}
