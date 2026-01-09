@@ -1,0 +1,33 @@
+- describe: symlink with default permissions fails
+  expect_failure: true
+  permissions: []
+- describe: symlink with network client permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-client
+- describe: symlink with network server permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-network-server
+- describe: symlink with read filesystem permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: symlink with write filesystem permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write
+- describe: symlink with filesystem permissions on /var fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write
+    - --allow-file-system-path=/var
+    - --allow-file-system-path=/etc/ld.so.cache
+    - --allow-file-system-path=/lib/x86_64-linux-gnu
+- describe: symlink with filesystem permissions on /tmp succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write
+    - --allow-file-system-path=/tmp
+    - --allow-file-system-path=/etc/ld.so.cache
+    - --allow-file-system-path=/lib/x86_64-linux-gnu
