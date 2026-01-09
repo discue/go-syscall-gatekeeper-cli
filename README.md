@@ -22,21 +22,21 @@
 
 <br/>
 
-# cuandari/lib - Proecess Manager with Privilege Restriction
-Go process manager that can be used to 
+# cuandari/lib - Process Manager with Privilege Restrictions
+Go process manager that can be used to
 - start other processes and control their lifecycle,
 - watch the status of the started process and return appropriate exit codes,
-- and, most importantly, **trace and limit the syscalls of the started process**. 
+- and, most importantly, **trace and limit the syscalls of the started process**.
 
-This allows you to start trusted and untrusted applications e.g. go, python, node apps and limit their access to the file system, or to the network. With simple command line flags you can easily grant permissions to the started process.
+This allows you to start trusted and untrusted applications (e.g., Go, Python, Node.js) and limit their access to the file system or the network. With simple command-line flags you can easily grant permissions to the started process.
 
 ## 🤝 Examples
-This section shows some examples of how processes can be started with different level of permissions and... success. See below, how the `curl` command is failing until both filesystem and network permissions are granted.
+This section shows examples of how processes can be started with different levels of permissions and success. See below how the `curl` command fails until both filesystem and network permissions are granted.
 
-While it's obvious, why `curl` needs network permissions, the filesystem permissions are necessary to read e.g. configuration files and shared libraries.
+While it's obvious why `curl` needs network permissions, filesystem permissions are necessary to read, e.g., configuration files and shared libraries.
 
 ### ❌ No filesystem permissions
-In this case, `curl` is only started with a default set of permissions. The command fails because, access to the filesystem gets denied.
+In this case, `curl` is only started with a default set of permissions. The command fails because access to the filesystem is denied.
 ```bash
 $ gatekeeper run -- curl -v google.com
 [...]
@@ -47,7 +47,7 @@ Exiting with code 111
 exit status 111
 ```
 
-### ❌ With filesystem permissions, but no permission to access network
+### ❌ With filesystem permissions, but no permission to access the network
 In this second case, `curl` is started with a default set of permissions and **read access for the file system**. The command still fails because access to the network-related socket syscall gets denied.
 ```bash
 $ gatekeeper run --allow-file-system-read -- curl -v google.com
@@ -142,7 +142,7 @@ In addition to grouped permissions, you can enable specific syscalls directly fr
 - `--allow-syscall=<name>`: equivalent form using `=`.
 
 ### 🔎 Trace
-The `trace` subcommand run the given binary and traces the syscalls. In this case, the `gatekeeper` will 
+The `trace` subcommand runs the given binary and traces its syscalls. For example:
 
 ```bash
 ./gatekeeper trace ls -l
@@ -161,7 +161,7 @@ To run the end-to-end tests, run the following command
 ```bash
 ./test-e2e.sh
 ```
-This will run all the end-to-end tests located in the `test-e2e` directory
+This will run all the end-to-end tests located in the `test-e2e` directory.
 
 ## 📄 License
 [BSD 3-Clause](https://choosealicense.com/licenses/bsd-3-clause/)
