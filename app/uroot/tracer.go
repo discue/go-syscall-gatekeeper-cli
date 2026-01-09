@@ -171,34 +171,34 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						allow = syscalls.IsSocketAllowed(s, rec.Event == SyscallEnter)
 					case name == "connect":
 						allow = syscalls.IsConnectAllowed(s, rec.Event == SyscallEnter)
-					// Enforce path-level whitelist for open/openat/openat2 when configured.
-					case name == "openat2" &&
-						len(runtime.Get().FileSystemAllowedPaths) > 0:
-						// pathname is arg 1, dirfd is arg 0
-						if !syscalls.PathIsAllowed(s, 1, 0) {
-							allow = false
-						}
-					case name == "openat" &&
-						len(runtime.Get().FileSystemAllowedPaths) > 0:
-						// pathname is arg 1, dirfd is arg 0
-						if !syscalls.PathIsAllowed(s, 1, 0) {
-							allow = false
-						}
-					case name == "openat2" &&
-						runtime.Get().FileSystemAllowRead &&
-						!runtime.Get().FileSystemAllowWrite:
-						// Gate file open syscalls when only read access is allowed.
-						allow = syscalls.IsOpenAt2ReadOnly(s, rec.Event == SyscallEnter)
-					case name == "openat" &&
-						runtime.Get().FileSystemAllowRead &&
-						!runtime.Get().FileSystemAllowWrite:
-						// Gate file open syscalls when only read access is allowed.
-						allow = syscalls.IsOpenAtReadOnly(s, rec.Event == SyscallEnter)
-					case name == "open" &&
-						runtime.Get().FileSystemAllowRead &&
-						!runtime.Get().FileSystemAllowWrite:
-						// Gate file open syscalls when only read access is allowed.
-						allow = syscalls.IsOpenReadOnly(s, rec.Event == SyscallEnter)
+					case name == "open":
+						allow = syscalls.IsOpenAllowed(s, rec.Event == SyscallEnter)
+					case name == "openat":
+						allow = syscalls.IsOpenAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "openat2":
+						allow = syscalls.IsOpenAt2Allowed(s, rec.Event == SyscallEnter)
+					case name == "mkdir":
+						allow = syscalls.IsMkdirAllowed(s, rec.Event == SyscallEnter)
+					case name == "mkdirat":
+						allow = syscalls.IsMkdirAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "rmdir":
+						allow = syscalls.IsRmdirAllowed(s, rec.Event == SyscallEnter)
+					case name == "unlink":
+						allow = syscalls.IsUnlinkAllowed(s, rec.Event == SyscallEnter)
+					case name == "unlinkat":
+						allow = syscalls.IsUnlinkAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "rename":
+						allow = syscalls.IsRenameAllowed(s, rec.Event == SyscallEnter)
+					case name == "renameat":
+						allow = syscalls.IsRenameAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "link":
+						allow = syscalls.IsLinkAllowed(s, rec.Event == SyscallEnter)
+					case name == "linkat":
+						allow = syscalls.IsLinkAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "symlink":
+						allow = syscalls.IsSymlinkAllowed(s, rec.Event == SyscallEnter)
+					case name == "symlinkat":
+						allow = syscalls.IsSymlinkAtAllowed(s, rec.Event == SyscallEnter)
 					case name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto":
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()

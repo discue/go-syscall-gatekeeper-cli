@@ -2,7 +2,10 @@
 
 package syscalls
 
-import "golang.org/x/sys/unix"
+import (
+	"github.com/cuandari/lib/app/runtime"
+	"golang.org/x/sys/unix"
+)
 
 // IsOpenAt2ReadOnly checks read-only intent for openat2 by decoding open_how
 // from tracee memory via Syscall.Reader.
@@ -25,5 +28,21 @@ func IsOpenAt2ReadOnly(s Syscall, isEnter bool) bool {
 	if flags&writeAccMask == 0 {
 		return (flags&(unix.O_CREAT|unix.O_TRUNC|unix.O_APPEND) == 0)
 	}
+	return false
+}
+
+func IsOpenAt2Allowed(s Syscall, isEnter bool) bool {
+	readAllowed := runtime.Get().FileSystemAllowRead
+	writeAllowed := runtime.Get().FileSystemAllowWrite
+
+	isReadOnlySyscall := IsOpenAt2ReadOnly(s, isEnter)
+	if isReadOnlySyscall && readAllowed {
+		return PathIsAllowed(s, 1, 0)
+	}
+
+	if !isReadOnlySyscall && writeAllowed {
+		return PathIsAllowed(s, 1, 0)
+	}
+
 	return false
 }

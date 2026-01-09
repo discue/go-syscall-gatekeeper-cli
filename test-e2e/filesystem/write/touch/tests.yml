@@ -17,3 +17,15 @@
   expect_failure: false
   permissions:
     - --allow-file-system-write
+- describe: touch with filesystem permissions on /var fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write
+    - --allow-file-system-path=/var
+    - --allow-file-system-path=/lib/x86_64-linux-gnu
+- describe: touch with filesystem permissions on /etc succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write
+    - --allow-file-system-path=/etc
+    - --allow-file-system-path=/lib/x86_64-linux-gnu

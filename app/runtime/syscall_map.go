@@ -76,6 +76,7 @@ var syscallMap = map[string][]string{
 		"mkdirat",
 		"mknod",
 		"mknodat",
+		"rmdir",
 		"symlink",
 		"symlinkat",
 		"umask",
