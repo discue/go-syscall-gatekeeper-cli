@@ -106,6 +106,7 @@ You can pass the following flags.
   - `--allow-file-system-write` — Allow modifying the filesystem (create, write, rename, unlink, truncate).
   - `--allow-file-system` — Alias for `--allow-file-system-write` (full read/write filesystem access).
   - `--allow-file-system-permissions` — Allow changing file ownership and permissions (chmod/chown/fchmod/fchown*).
+  - `--allow-file-system-path` — Allow whitelisting specific filesystem paths (repeatable); **paths should be absolute**. Example: `--allow-file-system-path=/etc` `--allow-file-system-path=/lib`. When provided, access is restricted to the listed directories (useful to grant minimal read access without enabling broad filesystem permissions).
 
 - Network & sockets:
   - `--allow-network-client` — Allow outbound network connections (socket/connect/send/recv).
@@ -132,7 +133,7 @@ You can pass the following flags.
 
 
 ## Baseline
-By default (unless you pass `--allow-implicit-commands=false`), gatekeeper enables a safe baseline including process management, memory, synchronization, signals, basic time queries and sleep (`clock_gettime`, `gettimeofday`, `nanosleep`), miscellaneous, security, and system information. This avoids breaking common applications that need time functions without requiring extra flags. Use `--allow-timers-and-clocks-management` for the full timers/clock set (e.g., `timerfd_*`, `setitimer`), or keep the default minimal set for tighter policies. To explicitly disable the implicit baseline, pass `--allow-implicit-commands=false`. (Note: this flag replaces older `--no-implicit-allow`-style usage.)
+By default (unless you pass `--allow-implicit-commands=false`), gatekeeper enables a safe baseline including process management, memory, synchronization, signals, basic time queries and sleep (`clock_gettime`, `gettimeofday`, `nanosleep`), miscellaneous, security, and system information. This avoids breaking common applications that need time functions without requiring extra flags. Use `--allow-timers-and-clocks-management` for the full timers/clock set (e.g., `timerfd_*`, `setitimer`), or keep the default minimal set for tighter policies. If you only need to permit access to a small set of directories (for example, `/etc` or `/lib`), prefer `--allow-file-system-path` to whitelist those paths instead of granting broad filesystem read/write permissions. To explicitly disable the implicit baseline, pass `--allow-implicit-commands=false`. (Note: this flag replaces older `--no-implicit-allow`-style usage.)
 
 #### Dynamically allow individual syscalls
 In addition to grouped permissions, you can enable specific syscalls directly from the CLI without modifying configuration files. This is useful for targeted exceptions.

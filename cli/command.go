@@ -3,9 +3,24 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	sec "github.com/seccomp/libseccomp-golang"
 )
+
+// stringSlice is a repeatable flag type that collects each flag occurrence
+// into a slice. Implements flag.Value.
+type stringSlice []string
+
+func (s *stringSlice) String() string { return strings.Join([]string(*s), ",") }
+
+func (s *stringSlice) Set(v string) error {
+	if v == "" {
+		return nil
+	}
+	*s = append(*s, strings.TrimSpace(v))
+	return nil
+}
 
 // SyscallDeniedAction implements flag.Value for the on-syscall-denied flag.
 type SyscallDeniedAction string
@@ -45,6 +60,11 @@ type Command struct {
 	AllowFileSystemWriteAccess       *bool
 	AllowFileSystemAccess            *bool
 	AllowFileSystemPermissionsAccess *bool
+	// AllowFileSystemPath supports specifying the flag multiple times to
+	// build a whitelist. Example: --allow-file-system-paths=/etc --allow-file-system-paths=/var
+	AllowFileSystemPath *stringSlice
+	// Derived list (synonym) populated after Parse()
+	AllowFileSystemPathsList []string
 
 	AllowNetworkClient             *bool
 	AllowNetworkServer             *bool
@@ -81,6 +101,9 @@ func NewCommand() *Command {
 	c.AllowFileSystemWriteAccess = fs.Bool("allow-file-system-write", false, "Allow modifying the filesystem (create, write, rename, unlink, truncate)")
 	c.AllowFileSystemAccess = fs.Bool("allow-file-system", false, "Alias for --allow-file-system-write (full read/write filesystem access)")
 	c.AllowFileSystemPermissionsAccess = fs.Bool("allow-file-system-permissions", false, "Allow changing file ownership and permissions (chmod/chown/fchmod/fchown*)")
+	var allowFileSystemPaths stringSlice
+	fs.Var(&allowFileSystemPaths, "allow-file-system-path", "Allow filesystem path (repeatable); example: --allow-file-system-path=/etc --allow-file-system-path=/var")
+	c.AllowFileSystemPath = &allowFileSystemPaths // will be populated during Parse()
 
 	c.AllowNetworkClient = fs.Bool("allow-network-client", false, "Allow outbound network connections (socket/connect/send/recv)")
 	c.AllowNetworkServer = fs.Bool("allow-network-server", false, "Allow listening sockets and incoming connections (socket/bind/listen/accept)")
@@ -149,8 +172,17 @@ func indexByte(s string, c byte) int {
 	return -1
 }
 
-// Parse parses CLI flags using the command's internal flagSet.
-func (c *Command) Parse(args []string) error { return c.flagSet.Parse(args) }
+// Parse parses CLI flags using the command's internal flagSet and derives helper fields.
+func (c *Command) Parse(args []string) error {
+	if err := c.flagSet.Parse(args); err != nil {
+		return err
+	}
+	if c.AllowFileSystemPath != nil && len(*c.AllowFileSystemPath) > 0 {
+		c.AllowFileSystemPathsList = make([]string, len(*c.AllowFileSystemPath))
+		copy(c.AllowFileSystemPathsList, *c.AllowFileSystemPath)
+	}
+	return nil
+}
 
 // Args returns trailing non-flag arguments.
 func (c *Command) Args() []string { return c.flagSet.Args() }

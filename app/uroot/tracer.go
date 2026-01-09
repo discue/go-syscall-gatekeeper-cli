@@ -208,7 +208,34 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						allow = syscalls.IsSocketAllowed(s, rec.Event == SyscallEnter)
 					case name == "connect":
 						allow = syscalls.IsConnectAllowed(s, rec.Event == SyscallEnter)
+					// Enforce path-level whitelist for open/openat/openat2 when configured.
+					case name == "openat2" &&
+						len(runtime.Get().FileSystemAllowedPaths) > 0:
+						// pathname is arg 1, dirfd is arg 0
+						if !syscalls.PathIsAllowed(s, 1, 0) {
+							allow = false
+						}
+					case name == "openat" &&
+						len(runtime.Get().FileSystemAllowedPaths) > 0:
+						// pathname is arg 1, dirfd is arg 0
+						if !syscalls.PathIsAllowed(s, 1, 0) {
+							allow = false
+						}
+					case name == "open" &&
+						len(runtime.Get().FileSystemAllowedPaths) > 0:
+						// pathname is arg 0
+						if !syscalls.PathIsAllowed(s, 0, -1) {
+					// if write-only mode is enabled, deny read-only opens as an extra
+					// protection for cases where open would otherwise be permitted.
+					if runtime.Get().FileSystemAllowWrite && !runtime.Get().FileSystemAllowRead {
+						// If this is a read-only open, disallow.
+						if syscalls.IsOpenReadOnly(s, rec.Event == SyscallEnter) {
+							allow = false
+						}
+					}
 
+							allow = false
+						}
 					case name == "openat2" &&
 						runtime.Get().FileSystemAllowRead &&
 						!runtime.Get().FileSystemAllowWrite:

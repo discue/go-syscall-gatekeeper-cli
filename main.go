@@ -167,6 +167,11 @@ func configureAndParseArgs() []string {
 
 	conf.VerboseLog = *c.Verbose
 
+	// Use parsed list from CLI if provided
+	if len(c.AllowFileSystemPathsList) > 0 {
+		runtime.Get().FileSystemAllowedPaths = c.AllowFileSystemPathsList
+	}
+
 	if !*c.EnforceOnStartup {
 		if *c.TriggerEnforceOnLogMatch == "" && *c.TriggerEnforceOnSignal == "" {
 			fmt.Println("Error: To delay the enforcement of seccomp policies, please also specify either --trigger-enforce-on-log-match or --trigger-enforce-on-signal.")

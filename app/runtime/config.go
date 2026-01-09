@@ -24,6 +24,9 @@ type SyscallConfig struct {
 type FsConfig struct {
 	FileSystemAllowRead  bool `split_words:"true" default:"false"`
 	FileSystemAllowWrite bool `split_words:"true" default:"false"`
+	// FileSystemAllowedPaths, when non-empty, restricts filesystem access to
+	// the provided list of directories (whitelist). Paths should be absolute.
+	FileSystemAllowedPaths []string `split_words:"true"`
 }
 
 type NetworkConfig struct {

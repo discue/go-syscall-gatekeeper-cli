@@ -13,3 +13,19 @@
   expect_failure: false
   permissions:
     - --allow-file-system-read
+- describe: cat a file with write-only filesystem permissions fails
+  expect_failure: false
+  permissions:
+    - --allow-file-system-write
+- describe: cat a file with path permissions succeeds
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read
+    - --allow-file-system-path=/etc
+    - --allow-file-system-path=/lib
+- describe: cat a file with path permissions fails
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+    - --allow-file-system-path=/var
+    - --allow-file-system-path=/lib
