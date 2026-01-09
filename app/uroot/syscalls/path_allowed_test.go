@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/cuandari/lib/app/runtime"
+	"github.com/cuandari/lib/app/utils"
 )
 
 func makeReaderFor(path string, baseAddr uintptr) func(Addr, interface{}) (int, error) {
@@ -76,7 +77,7 @@ func TestPathIsAllowedRelativeWithDirfd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer utils.SafeClose(f, "test-path")
 	fd := int(f.Fd())
 
 	var s Syscall
