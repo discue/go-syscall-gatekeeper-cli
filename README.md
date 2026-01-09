@@ -50,7 +50,10 @@ exit status 111
 ### ❌ With filesystem permissions, but no permission to access the network
 In this second case, `curl` is started with a default set of permissions and **read access for the file system**. The command still fails because access to the network-related socket syscall gets denied.
 ```bash
-$ gatekeeper run --allow-file-system-read -- curl -v google.com
+$ gatekeeper run \
+  --allow-file-system-read \
+  -- \
+  curl -v google.com
 [...]
 Syscall not allowed: socket
 enter [pid 4996] socket
@@ -60,9 +63,41 @@ exit status 111
 ```
 
 ### ✅ With filesystem and network permissions
-In this final case, `curl` is started with read access to the filesystem **and** network. The command then exits with success.
+In this case, `curl` is started with read access to the filesystem **and** network. The command then exits with success.
 ```bash
-$ gatekeeper run --allow-file-system-read --allow-network-client -- curl -v google.com
+$ gatekeeper run \
+  --allow-file-system-read \
+  --allow-network-client \
+  --allow-network-local-sockets \
+  -- \
+  curl -v google.com
+[...]
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>
+[...]
+PID 5255 exited from exit status 0 (code = 0)
+Exiting with code 0
+```
+
+### ✅ With filesystem and network permissions
+In this case, `curl` is started with read access to only specific folders **and** network. The command then exits with success.
+```bash
+$ gatekeeper run \
+  --allow-file-system-read \
+  --allow-network-client \
+  --allow-network-local-sockets \
+  --allow-file-system-path=/etc \
+  --allow-file-system-path=/lib/x86_64-linux-gnu \
+  --allow-file-system-path=/usr/lib \
+  --allow-file-system-path=/usr/share \
+  --allow-file-system-path=/proc/sys/crypto \
+  --allow-file-system-path=/home/stfsy \
+  -- \
+  curl -v google.com
 [...]
 <HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
 <TITLE>301 Moved</TITLE></HEAD><BODY>
@@ -85,12 +120,6 @@ go get https://github.com/cuandari/lib-oss
 ## 🔣 Usage
 ```bash
 ./gatekeeper [run|trace] [flags] -- [binary] [args...]
-```
-### 🚀 Run
-The `run` subcommand runs the given command without any syscall restrictions. This is as good as calling the target program directly.
-
-```bash
-./gatekeeper run ls -l
 ```
 
 ### 🤺 Permissions
