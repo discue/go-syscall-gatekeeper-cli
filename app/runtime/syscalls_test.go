@@ -123,5 +123,5 @@ func TestAllowMisc(t *testing.T) {
 	sal.AllowMisc()
 
 	a.NotEmpty(sal.Syscalls)
-	a.Contains(sal.Syscalls, "sync")
+	a.Contains(sal.Syscalls, "getrandom")
 }
