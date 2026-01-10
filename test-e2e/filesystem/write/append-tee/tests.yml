@@ -1,19 +1,24 @@
 - describe: tee -a append with default permissions fails
+  configure_gatekeeper_entrypoint: false
   expect_failure: true
   permissions: []
 - describe: tee -a append with network client permissions fails
+  configure_gatekeeper_entrypoint: false
   expect_failure: true
   permissions:
     - --allow-network-client
 - describe: tee -a append with network server permissions fails
+  configure_gatekeeper_entrypoint: false
   expect_failure: true
   permissions:
     - --allow-network-server
 - describe: tee -a append with read filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
   expect_failure: true
   permissions:
     - --allow-file-system-read
 - describe: tee -a append with write filesystem permissions succeeds
+  configure_gatekeeper_entrypoint: false
   expect_failure: false
   permissions:
     - --allow-file-system-write

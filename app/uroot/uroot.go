@@ -70,6 +70,8 @@ func Exec(ctx context.Context, bin string, args []string) (*exec.Cmd, context.Co
 	cmd.Cancel = func() error {
 		return syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
 	}
+	// Forward parent's stdin to the child so piped input reaches the tracee.
+	cmd.Stdin = os.Stdin
 
 	if runtimeConfig.Get().ExecutionMode == runtimeConfig.EXECUTION_MODE_TRACE {
 		// nolint:gosimple
