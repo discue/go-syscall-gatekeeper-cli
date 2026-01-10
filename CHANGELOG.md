@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/cuandari/lib-oss/compare/v1.0.0...v1.1.0) (2026-01-10)
+
+
+### Features
+
+* add path handling for access and faccessat variants ([c194dfa](https://github.com/cuandari/lib-oss/commit/c194dfa04dabfe1380b5ff1871beb240bc266c16))
+* handle more syscalls and check more syscall args ([efcb8f2](https://github.com/cuandari/lib-oss/commit/efcb8f2af95589b1f7acd4f2716f9104a37340c7))
+* pass std to tracee ([3c0278a](https://github.com/cuandari/lib-oss/commit/3c0278af7f5ca168cb811d5190b3b985c1a3868a))
+
 ## 1.0.0 (2026-01-09)
 
 
