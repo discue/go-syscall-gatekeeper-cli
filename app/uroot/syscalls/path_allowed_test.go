@@ -112,3 +112,21 @@ func TestPathIsAllowedNewFileUnderAllowedParent(t *testing.T) {
 		t.Fatalf("expected allowed for creating new file under allowed parent")
 	}
 }
+
+func TestPathIsNotAllowedParentWhenOnlyChildAllowed(t *testing.T) {
+	// If only a child path is allowed (e.g., /etc/os-release), the parent
+	// directory (/etc) should NOT be allowed for checks such as access().
+	td := t.TempDir()
+	child := filepath.Join(td, "childdir")
+	runtime.Get().FileSystemAllowedPaths = []string{child}
+
+	path := td
+	var s Syscall
+	base := uintptr(0x4500)
+	s.Args[0] = SyscallArgument{Value: base}
+	s.Reader = makeReaderFor(path, base)
+
+	if PathIsAllowed(s, 0, -1) {
+		t.Fatalf("expected parent path %s NOT to be allowed when only child %s is allowed", path, child)
+	}
+}
