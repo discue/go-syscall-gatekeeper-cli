@@ -21,13 +21,13 @@
   expect_failure: true
   permissions:
     - --allow-file-system-write
-    - --allow-file-system-path=/etc/ld.so.cache
+    - --allow-file-system-path=/etc
     - --allow-file-system-path=/lib/x86_64-linux-gnu
     - --allow-file-system-path=/var
 - describe: rmdir with filesystem permissions on /tmp succeeds
   expect_failure: false
   permissions:
     - --allow-file-system-write
-    - --allow-file-system-path=/etc/ld.so.cache
+    - --allow-file-system-path=/etc
     - --allow-file-system-path=/lib/x86_64-linux-gnu
     - --allow-file-system-path=/tmp
