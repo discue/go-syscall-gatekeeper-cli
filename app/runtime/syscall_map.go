@@ -349,7 +349,7 @@ var syscallMap = map[string][]string{
 		// "process_mrelease",
 		"rseq",
 		"membarrier",
-		// "restart_syscall",
+		"restart_syscall",
 		// "cachestat",
 		"getrandom",
 		// "io_cancel",
