@@ -1,9 +1,7 @@
 
 <p align="center">
-<picture>
   <!-- <source media="(prefers-color-scheme: dark)" srcset="https://avatars.githubusercontent.com/u/252919145?s=200&v=4"> -->
-  <img alt="Cuandari Logo featuring a medieval helmet" src="https://avatars.githubusercontent.com/u/252919145?s=200&v=4" width="200" height="200" style="border-radius: 2.5rem">
-</picture>
+  <img alt="Cuandari Logo featuring a medieval helmet" src="https://storage.googleapis.com/stfsy-cuandari/cuandari-rounded" width="400" height="400" style="border-radius: 50%">
 </p>
 
 <br/>
