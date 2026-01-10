@@ -199,6 +199,17 @@ func (t *tracer) runLoop(cancelFunc context.CancelCauseFunc) {
 						allow = syscalls.IsSymlinkAllowed(s, rec.Event == SyscallEnter)
 					case name == "symlinkat":
 						allow = syscalls.IsSymlinkAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "access":
+						// access(const char *pathname, int mode) : pathname is arg 0
+						allow = syscalls.IsAccessAllowed(s, rec.Event == SyscallEnter)
+					case name == "faccessat":
+						// faccessat(int dirfd, const char *pathname, int mode)
+						// pathname is arg 1, dirfd is arg 0
+						allow = syscalls.IsFaccessAtAllowed(s, rec.Event == SyscallEnter)
+					case name == "faccessat2":
+						// faccessat2(int dirfd, const char *pathname, int mode, int flags)
+						// pathname is arg 1, dirfd is arg 0
+						allow = syscalls.IsFaccessAtAllowed(s, rec.Event == SyscallEnter)
 					case name == "write" || name == "writev" || name == "send" || name == "sendmsg" || name == "sendmmsg" || name == "sendto":
 						syscallArgs := rec.Syscall.Args
 						fd := syscallArgs[0].Int()
