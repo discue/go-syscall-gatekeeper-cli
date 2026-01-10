@@ -59,7 +59,8 @@ func TestFaccessAtAllowedWithATFDCWD(t *testing.T) {
 	var s Syscall
 	base := uintptr(0xB000)
 	// dirfd at arg 0 is AT_FDCWD
-	s.Args[0] = SyscallArgument{Value: uintptr(unix.AT_FDCWD)}
+	v := unix.AT_FDCWD
+	s.Args[0] = SyscallArgument{Value: uintptr(v)}
 	// path at arg 1
 	s.Args[1] = SyscallArgument{Value: base}
 	// Reader reads the relative path
@@ -76,6 +77,8 @@ func TestFaccessAtAllowedWithATFDCWD(t *testing.T) {
 	if err := os.Chdir(d); err != nil {
 		t.Fatal(err)
 	}
+	// Ensure PathIsAllowed can resolve AT_FDCWD via /proc/<pid>/cwd
+	s.TraceePID = os.Getpid()
 
 	if !IsFaccessAtAllowed(s, true) {
 		t.Fatalf("expected faccessat allowed for relative path %s with AT_FDCWD", relPath)
