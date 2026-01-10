@@ -18,8 +18,6 @@
 [![tests](https://github.com/cuandari/lib-oss/actions/workflows/tests.yml/badge.svg)](https://github.com/cuandari/lib-oss/actions/workflows/tests.yml)
 </div>
 
-<br/>
-
 # cuandari/lib - Process Manager with Privilege Restrictions
 Go process manager that can be used to
 - start other processes and control their lifecycle,
