@@ -30,6 +30,12 @@ Go process manager that can be used to
 
 This allows you to start trusted and untrusted applications (e.g., Go, Python, Node.js) and limit their access to the file system or the network. With simple command-line flags you can easily grant permissions to the started process.
 
+## Use Cases
+- **Securely run untrusted code**: Limit what trusted and untrusted applications can do on your system.
+- **Sandboxing**: Create lightweight sandboxes for applications without the overhead of full VMs or containers.
+- **Testing and debugging**: Trace syscalls to understand application behavior and identify potential issues.
+- **Compliance and auditing**: Enforce strict policies on application behavior for regulatory compliance
+
 ## 🤝 Examples
 This section shows examples of how processes can be started with different levels of permissions and success. See below how the `curl` command fails until both filesystem and network permissions are granted.
 
