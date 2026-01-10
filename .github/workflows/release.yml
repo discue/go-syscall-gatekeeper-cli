@@ -1,6 +1,7 @@
 name: release-please
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -21,16 +22,29 @@ jobs:
           # for more options
           release-type: go
 
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: install dependencies
+        if: ${{ steps.release.outputs.release_created }}
+        run: sudo apt-get install -y libseccomp-dev pkg-config
+
       - name: build binaries
         if: ${{ steps.release.outputs.release_created }}
         run: |
           ./build.sh
-          mv cuandari "${{ env.RELEASE_NAME }}"-linux-x64
-          sha256sum "${{ env.RELEASE_NAME }}"-linux-x64 >> sha256sums.txt
+          mv cuandari cuandari-"${{ env.RELEASE_NAME }}"-linux-x64
+          sha256sum cuandari-"${{ env.RELEASE_NAME }}"-linux-x64 >> sha256sums.txt
 
       - name: upload release assets
         if: ${{ steps.release.outputs.release_created }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ steps.release.outputs.tag_name }} "${{ env.RELEASE_NAME }}"-linux-x64 sha256sums.txt
+          gh release upload "${{ env.RELEASE_NAME }}" cuandari-"${{ env.RELEASE_NAME }}"-linux-x64 sha256sums.txt
