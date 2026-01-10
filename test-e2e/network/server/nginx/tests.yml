@@ -1,0 +1,37 @@
+- describe: nginx server with default permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions: []
+- describe: nginx server with network client permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+    - --allow-file-system-write
+    - --allow-timers-and-clocks-management
+    - --allow-file-system-permissions
+    - --allow-process-communication
+    - --allow-network-local-sockets
+    - --allow-network-client
+- describe: nginx server with network server permissions succeeds
+  configure_gatekeeper_entrypoint: false
+  expect_failure: false
+  permissions:
+    - --allow-file-system-read
+    - --allow-file-system-write
+    - --allow-timers-and-clocks-management
+    - --allow-file-system-permissions
+    - --allow-process-communication
+    - --allow-network-local-sockets
+    - --allow-network-server
+    - --allow-syscall-read
+- describe: nginx server with read filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-read
+- describe: nginx server with write filesystem permissions fails
+  configure_gatekeeper_entrypoint: false
+  expect_failure: true
+  permissions:
+    - --allow-file-system-write
